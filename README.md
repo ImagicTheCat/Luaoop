@@ -5,6 +5,34 @@ Look at the examples for more understanding of the library.
 
 # Luaoop
 
+## API
+
+```lua
+-- create a new class with the passed identifier (following the Lua name notation, no special chars except underscore) and base classes (multiple inheritance possible)
+-- return class or nil if name/base classes are invalid
+class.new(name, ...)
+-- SHORTCUT class(name, ...)
+
+-- get private space table of the instantiated object
+class.getprivate(o)
+
+-- return classname or nil if not a class or instance of class
+class.name(t)
+
+-- return the defined classname or the lua type for an instance or class
+class.type(t)
+
+-- check if the instance is an instance of a specific classname
+class.instanceof(o, name)
+
+-- create object with a specific class and constructor arguments 
+class.instanciate(class, ...)
+-- SHORTCUT Class(...)
+
+-- (internal) get operator from instance/class, rhs_class can be nil for unary operators
+class.getop(lhs_class, name, rhs_class, no_error)
+```
+
 ## Inheritance
 
 Single and multiple inheritance is possible, variables and methods will be overridden by each new definition of the child class methods.
@@ -49,8 +77,8 @@ end
 
 ## Special methods
 
-You can define special methods for a class, they will be overridden the same way other functions are.
-Every special function start with `__` (they are not metamethods, they are named like this to keep consistency with the Lua notation).
+You can define special methods for a class, they will be overridden the same way other methods are.
+Every special method start with `__` (they are not metamethods, they are named like this to keep consistency with the Lua notation).
 
 ### Misc
 
