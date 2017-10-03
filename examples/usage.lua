@@ -8,6 +8,15 @@ class = Luaoop.class
 -- DEF OBJECT
 Object = class("Object")
 
+Object.color = {
+  BLACK = 0,
+  BLUE = 1,
+  YELLOW = 2,
+  RED = 3,
+  GREEN = 4,
+  WHITE = 5
+}
+
 function Object:__construct()
   print("new object")
 end
@@ -22,6 +31,10 @@ Bottle = class("Bottle", Object)
 
 function Bottle:__construct(max)
   self.Object.__construct(self)
+
+  -- try to change the value, without success
+  print(self.Object.color.GREEN)
+  self.Object.color.GREEN = 42
 
   self.max = max
   self.amount = 0

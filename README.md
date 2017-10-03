@@ -16,6 +16,11 @@ class.new(name, ...)
 -- get private space table of the instantiated object
 class.getprivate(o)
 
+-- return a new table giving access to the passed table properties
+-- (deep, recursive safe access on subtables)
+-- useful to protect global class data from modifications (only if getmetatable is not allowed)
+class.safeaccess(t)
+
 -- return classname or nil if not a class or instance of class
 class.name(t)
 
@@ -112,6 +117,17 @@ Be careful with `eq`, `le`, `lt`, they will be called like any binary operator, 
 
 Comparison of different instances with different types is possible, but this may change in the future.
 
+## "Security / Sandbox"
+
+Luaoop doesn't aim to "sandbox" things, but if you want to add private properties to the object instances (for example, to keep a luajit FFI pointer away from users), use the `class.getprivate` function and remove it from the user env (`class.getprivate` use `getmetatable`, so you will need to remove it too).
+Instantiated objects are safe to handle, users can't touch the class definitions from the instance if they don't have access to the original class table (for example, an enumeration in a class should not be modified from the instance and any child class).
+
+With some tweaks, you can allow scripts to create classes based on other classes, without allowing them to mess with the previous definitions.
+
 # Version
 
 It is designed to work with luajit (Lua 5.1), but the code should be easy to adapt to other Lua versions.
+
+# TODO
+
+* clearer way to handle classes in a scripting/sandboxed env

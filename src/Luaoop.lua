@@ -40,8 +40,7 @@ function class.new(name, ...)
       setmetatable(c, { __index = bases[1], classname = name, private = {}, __call = function(t, ...) return class.instanciate(c, ...) end})
 
       -- add class methods access in classname namespace -> instance.Class.method(instance, ...)
-      -- prevents methods obfuscation with newindex
-      c[name] = setmetatable({}, { __index = c, __newindex = function(t,k,v) end})
+      c[name] = class.safeaccess(c)
 
       return c
     end
@@ -52,6 +51,26 @@ end
 function class.getprivate(o)
   local mtable = getmetatable(o)
   if mtable then return mtable.private else return nil end
+end
+
+-- return a new table giving access to the passed table properties
+-- (deep, recursive safe access on subtables)
+-- useful to protect global class data from modifications (only if getmetatable is not allowed)
+function class.safeaccess(t)
+  local _t = {}
+
+  return setmetatable(_t, { 
+    __index = function(_t, k)
+      local v = t[k]
+      if type(v) == "table" then -- create subtable safe access
+        v = class.safeaccess(v)
+        rawset(_t,k,v) -- save access
+      end
+      
+      return v -- return regular value
+    end
+    , __newindex = function(t,k,v) end -- prevents methods obfuscation with newindex
+  })
 end
 
 -- return classname or nil if not a class or instance of class
