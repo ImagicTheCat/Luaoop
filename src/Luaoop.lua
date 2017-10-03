@@ -194,7 +194,7 @@ local function op_concat(lhs,rhs)
 
   f = getop(rhs, "concat", lhs)
   if f then 
-    return f(rhs,lhs) 
+    return f(rhs,lhs,true) 
   end
 end
 

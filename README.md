@@ -102,7 +102,7 @@ Unary
 * `unm`: like the metamethod
 
 Binary
-* `concat`: like the metamethod (no order)
+* `concat`: like the metamethod (no order, but has a second parameter "inverse" when the concat is not forward)
 * `add`: like the metamethod (no order)
 * `sub`: like the metamethod (can be omitted if `add` is defined and `unm` is defined for rhs)
 * `mul`: like the metamethod (no order)
