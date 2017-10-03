@@ -33,11 +33,16 @@ function class.new(name, ...)
       end
     end
 
-    if #bases > 1 then -- multiple inheritance
+    if #bases > 1 then -- multiple inheritance, proxy
       setmetatable(c,{ __index = propagate_index, bases = bases })
-      return class.new(name, c)
+      return class.new(name, c) -- then single inheritance of the proxy
     else -- single inheritance
       setmetatable(c, { __index = bases[1], classname = name, private = {}, __call = function(t, ...) return class.instanciate(c, ...) end})
+
+      -- add class methods access in classname namespace -> instance.Class.method(instance, ...)
+      -- prevents methods obfuscation with newindex
+      c[name] = setmetatable({}, { __index = c, __newindex = function(t,k,v) end})
+
       return c
     end
   end

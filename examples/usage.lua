@@ -8,6 +8,10 @@ class = Luaoop.class
 -- DEF OBJECT
 Object = class("Object")
 
+function Object:__construct()
+  print("new object")
+end
+
 function Object:classname()
   return class.name(self)
 end
@@ -17,6 +21,8 @@ end
 Bottle = class("Bottle", Object)
 
 function Bottle:__construct(max)
+  self.Object.__construct(self)
+
   self.max = max
   self.amount = 0
 end
