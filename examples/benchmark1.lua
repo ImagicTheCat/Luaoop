@@ -136,3 +136,9 @@ for i=1,100000 do
   local vec = vec+vec*0.42
 end
 clock:stop()
+
+clock:start()
+local verybigsim = Simulation(100000)
+clock:stop()
+
+
