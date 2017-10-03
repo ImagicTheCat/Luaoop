@@ -19,7 +19,7 @@ local function propagate_index(t,k)
   end
 end
 
--- create a new class with the passed identifier and base classes (multiple inheritance possible)
+-- create a new class with the passed identifier (following the Lua name notation, no special chars except underscore) and base classes (multiple inheritance possible)
 -- return class or nil if name/base classes are invalid
 function class.new(name, ...)
   if type(name) == "string" then
@@ -130,83 +130,130 @@ end
 -- contains operators definitions
 local ops = {}
 
-local function get_op(idname, no_error)
-  local f = ops[idname]
+
+-- get operator from instance/class, rhs_class can be nil for unary operators
+function class.getop(lhs_class, name, rhs_class, no_error)
+  local f = nil
+
+  local mtable = getmetatable(lhs_class)
+  if mtable and mtable.private then -- check if class or instance
+    local fname = nil
+    if rhs_class then
+      fname = "__"..name.."_"..class.type(rhs_class)
+    else
+      fname = "__"..name
+    end
+
+    f = lhs_class[fname]
+  end
+
   if f then
     return f
   elseif not no_error then
-    error("operator "..idname.." undefined.")
+    error("operator <"..class.type(lhs_class).."> ["..name.."] <"..class.type(rhs_class).."> undefined.")
   end
 end
 
+local getop = class.getop
+
 -- proxy lua operators
-local function op_unm(lhs)
-  local f = get_op(class.type(lhs).."-")
+local function op_tostring(lhs)
+  local f = getop(lhs, "tostring", nil)
   if f then return f(lhs) end
 end
 
-local function op_add(lhs,rhs)
-  local f = get_op(class.type(lhs).."+"..class.type(rhs), true)
+local function op_concat(lhs,rhs)
+  local f = getop(lhs, "concat", rhs, true)
   if f then 
     return f(lhs,rhs) 
   end
 
-  f = get_op(class.type(rhs).."+"..class.type(lhs))
+  f = getop(rhs, "concat", lhs)
   if f then 
     return f(rhs,lhs) 
   end
 end
 
-local function op_sub(lhs,rhs) -- defined as lhs+(-rhs)
-  local f = get_op(class.type(lhs).."+"..class.type(rhs))
-  if f then 
-    return f(lhs,-rhs)
-  end
+local function op_unm(lhs)
+  local f = getop(lhs, "unm", nil)
+  if f then return f(lhs) end
 end
 
-local function op_mul(lhs,rhs)
-  local f = get_op(class.type(lhs).."*"..class.type(rhs), true)
+local function op_add(lhs,rhs)
+  local f = getop(lhs, "add", rhs, true)
   if f then 
     return f(lhs,rhs) 
   end
 
-  f = get_op(class.type(rhs).."*"..class.type(lhs))
+  f = getop(rhs, "add", lhs)
+  if f then 
+    return f(rhs,lhs) 
+  end
+end
+
+local function op_sub(lhs,rhs) -- also deduced as lhs+(-rhs)
+  local f = getop(lhs, "sub", rhs, true)
+  if f then 
+    return f(lhs,rhs)
+  end
+
+  f = getop(lhs, "add", rhs)
+  if f then
+    return f(lhs, -rhs)
+  end
+end
+
+local function op_mul(lhs,rhs)
+  local f = getop(lhs, "mul", rhs, true)
+  if f then 
+    return f(lhs,rhs) 
+  end
+
+  f = getop(rhs, "mul", lhs)
   if f then 
     return f(rhs,lhs) 
   end
 end
 
 local function op_div(lhs,rhs)
-  local f = get_op(class.type(lhs).."/"..class.type(rhs))
+  local f = getop(lhs, "div", rhs)
   if f then 
     return f(lhs,rhs) 
   end
 end
 
--- define an operator
--- ex: defineOp(Vec,"*type",f)
--- ex: defineOp(Vec,"/type",f)
--- ex: defineOp(Vec,"+type",f)
--- ex: defineOp(Vec,"-",f)
--- a-b is handled as a+(-b)
-function class.defop(_class,op_type,f)
-  ops[class.name(_class)..op_type] = f
+local function op_mod(lhs,rhs)
+  local f = getop(lhs, "mod", rhs)
+  if f then 
+    return f(lhs,rhs) 
+  end
 end
 
--- define global operator (full notation)
-function class.defgop(full_op_type,f)
-  ops[full_op_type] = f
+local function op_pow(lhs,rhs)
+  local f = getop(lhs, "pow", rhs)
+  if f then 
+    return f(lhs,rhs) 
+  end
 end
 
--- build lua metamethods to read defined operators
-local function buildOps(instance)
-  local mtable = getmetatable(instance)
-  if mtable then
-    mtable.__unm = op_unm
-    mtable.__add = op_add
-    mtable.__sub = op_sub
-    mtable.__mul = op_mul
-    mtable.__div = op_div
+local function op_eq(lhs,rhs)
+  local f = getop(lhs, "eq", rhs, true)
+  if f then 
+    return f(lhs,rhs) 
+  end
+end
+
+local function op_lt(lhs,rhs)
+  local f = getop(lhs, "lt", rhs)
+  if f then 
+    return f(lhs,rhs) 
+  end
+end
+
+local function op_le(lhs,rhs)
+  local f = getop(lhs, "le", rhs)
+  if f then 
+    return f(lhs,rhs) 
   end
 end
 
@@ -218,11 +265,22 @@ function class.instanciate(class, ...)
   local mtable = {__index = class, private = {}}
   setmetatable(o,mtable)
 
-  -- build operators metamethods
-  buildOps(o)
+  -- add operators metamethods
+  mtable.__unm = op_unm
+  mtable.__add = op_add
+  mtable.__sub = op_sub
+  mtable.__mul = op_mul
+  mtable.__div = op_div
+  mtable.__pow = op_pow
+  mtable.__mod = op_mod
+  mtable.__eq = op_eq
+  mtable.__le = op_le
+  mtable.__lt = op_lt
+  mtable.__tostring = op_tostring
+  mtable.__concat = op_concat
 
   -- construct
-  if o.construct then o:construct(...) end
+  if o.__construct then o:__construct(...) end
   return o
 end
 
