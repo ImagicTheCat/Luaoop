@@ -110,3 +110,8 @@ print(b)
 -- sub a bottle by itself (0/0 bottle)
 b = bottle-bottle
 print(b)
+
+
+-- get bottle definition
+local cbottle = class.definition("Bottle")
+print(cbottle(42)) -- create a bottle

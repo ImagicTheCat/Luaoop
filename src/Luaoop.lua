@@ -4,6 +4,8 @@ local Luaoop = {}
 
 local class = {}
 
+local classes = {}
+
 -- __index used for multiple inheritance
 local function propagate_index(t,k)
   local bases = getmetatable(t).bases
@@ -41,10 +43,17 @@ function class.new(name, ...)
 
       -- add class methods access in classname namespace -> instance.Class.method(instance, ...)
       c[name] = class.safeaccess(c)
+      classes[name] = c -- reference class
 
       return c
     end
   end
+end
+
+-- return the class definition for the specified class name (nil if not found)
+-- it is a raw access, any method can be modified/added/removed
+function class.definition(name)
+  return classes[name]
 end
 
 -- get private space table of the instantiated object

@@ -13,6 +13,10 @@ Look at the examples for more understanding of the library.
 class.new(name, ...)
 -- SHORTCUT class(name, ...)
 
+-- return the class definition for the specified class name (nil if not found)
+-- it is a raw access, any method can be modified/added/removed
+function class.definition(name)
+
 -- get private space table of the instantiated object
 class.getprivate(o)
 
