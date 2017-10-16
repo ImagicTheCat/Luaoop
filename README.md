@@ -15,7 +15,7 @@ class.new(name, ...)
 
 -- return the class definition for the specified class name (nil if not found)
 -- it is a raw access, any method can be modified/added/removed
-function class.definition(name)
+class.definition(name)
 
 -- get private space table of the instantiated object
 class.getprivate(o)
