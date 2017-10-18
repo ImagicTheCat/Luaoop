@@ -3,7 +3,7 @@ package = "Luaoop"
 version = "0.1"
 source = {
   url = "git://github.com/ImagicTheCat/Luaoop",
-  tag = "v0.1"
+  tag = "0.1"
 }
 
 description = {
