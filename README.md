@@ -135,6 +135,7 @@ It is designed to work with luajit (Lua 5.1), but the code should be easy to ada
 # Install
 
 Instead of adding the file manually, you can use luarocks:
+
 `luarocks install https://raw.githubusercontent.com/ImagicTheCat/Luaoop/master/rockspecs/luaoop-0.1-1.rockspec`
 
 Replace the rockspec with the one you want.
