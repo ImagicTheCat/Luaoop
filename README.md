@@ -130,7 +130,14 @@ With some tweaks, you can allow scripts to create classes based on other classes
 
 # Version
 
-It is designed to work with luajit (Lua 5.1), but the code should be easy to adapt to other Lua versions.
+It is designed to work with luajit (Lua 5.1), but the code should be easy to adapt to other Lua versions (if needed).
+
+# Install
+
+Instead of adding the file manually, you can use luarocks:
+`luarocks install https://raw.githubusercontent.com/ImagicTheCat/Luaoop/master/rockspecs/luaoop-0.1-1.rockspec`
+
+Replace the rockspec with the one you want.
 
 # TODO
 
