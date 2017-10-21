@@ -5,6 +5,18 @@ Look at the examples for more understanding of the library.
 
 # Luaoop
 
+## Install
+
+Instead of adding the file manually, you can use luarocks:
+
+`luarocks install https://raw.githubusercontent.com/ImagicTheCat/Luaoop/master/rockspecs/luaoop-0.1-1.rockspec`
+
+Replace the rockspec with the one you want.
+
+## Version
+
+It is designed to work with luajit (Lua 5.1), but the code should work on latest versions.
+
 ## API
 
 ```lua
@@ -17,13 +29,24 @@ class.new(name, ...)
 -- it is a raw access, any method can be modified/added/removed
 class.definition(name)
 
--- get private space table of the instantiated object
+-- same as class.definition but returning a safe access class
+class.safedef(name)
+
+-- get private storage table of the instantiated object
 class.getprivate(o)
 
--- return a new table giving access to the passed table properties
+-- return a new table giving access to the passed table properties (prevents adding/removing/modifying properties)
 -- (deep, recursive safe access on subtables)
 -- useful to protect global class data from modifications (only if getmetatable is not allowed)
-class.safeaccess(t)
+-- works also to get a safe class definition for inheritance and instantiation
+--
+-- class: if passed/true, will preserve class table functionalities (instantiation, type, etc)
+class.safeaccess(t, class)
+
+
+-- return the original table from a safe access table, or nil if not a safe access
+-- return also the safe access metatable as second return values
+class.unsafe(safe_access)
 
 -- return classname or nil if not a class or instance of class
 class.name(t)
@@ -44,8 +67,10 @@ class.getop(lhs_class, name, rhs_class, no_error)
 
 ## Inheritance
 
-Single and multiple inheritance is possible, variables and methods will be overridden by each new definition of the child class methods.
+Single and multiple inheritances are possibles, "static" variables and methods (all properties) will be overridden by each new definition of the child class.
 In case of multiple inheritance with methods/members with the same name, one will be taken arbitrarily. You can solve this issue by accessing directly to a specific parent method/member using the super access.
+
+Inheritance resolving is dynamic, it means you can modify any class and the changes will be applied to already instantiated objects.
 
 ```lua
 A = class("A")
@@ -83,6 +108,18 @@ function B:__construct()
   print("b")
 end
 ```
+
+If you seek performance over flexibility, you can call super methods like this:
+```
+B = class("B", A)
+
+local s__construct = B.__construct -- cache inherited before overload
+function B:__construct()
+  s__construct(self)
+  print("b")
+end
+```
+Since the method is cached, later modification of the A constructor will not be applied to B.
 
 ## Special methods
 
@@ -128,18 +165,22 @@ Instantiated objects are safe to handle, users can't touch the class definitions
 
 With some tweaks, you can allow scripts to create classes based on other classes, without allowing them to mess with the previous definitions.
 
-# Version
+Here are a non-exhaustive list of functions you should remove from the sandbox for safe class sharing and/or app private storage for instances:
+* `getmetatable`
+* `setmetatable`
+* `rawset`
+* `rawget`
+* `class.unsafe`
+* `class.definition`
+* `class.getprivate`
 
-It is designed to work with luajit (Lua 5.1), but the code should be easy to adapt to other Lua versions (if needed).
+Which let:
+* `class.new`
+* `class.safeaccess`
+* `class.safedef`: only if you want all the class definitions to be accessibles
+* `class.name`
+* `class.type`
+* `class.instanceof`
+* `class.instanciate`
 
-# Install
-
-Instead of adding the file manually, you can use luarocks:
-
-`luarocks install https://raw.githubusercontent.com/ImagicTheCat/Luaoop/master/rockspecs/luaoop-0.1-1.rockspec`
-
-Replace the rockspec with the one you want.
-
-# TODO
-
-* clearer way to handle classes in a scripting/sandboxed env
+See `sandbox.lua` example for usage.

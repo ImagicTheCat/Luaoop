@@ -11,6 +11,7 @@ local function propagate_index(t,k)
   local bases = getmetatable(t).bases
   -- find key in table properties
   for l,v in pairs(bases) do
+    --[[ -- optimization (lose flexibility)
     local p = v[k]
     if p ~= nil then 
       if type(p) == "table" or type(p) == "function" then
@@ -18,6 +19,8 @@ local function propagate_index(t,k)
       end
       return p
     end
+    --]]
+    return v[k]
   end
 end
 
@@ -28,10 +31,24 @@ function class.new(name, ...)
     local c = {}
     local bases = {...}
 
-    -- check inheritance validity
+    -- replace safe access
+    for k,v in pairs(bases) do
+      local c, mt = class.unsafe(v)
+      if c and mt.class then -- is safe access with class functionalities
+        bases[k] = c 
+      end
+    end
+
+    -- check inheritance validity and generate safe access
     for k,v in pairs(bases) do
       if class.name(v) == nil then
         return nil
+      else -- generate safe access for bases direct tables in this class ("hide" parent tables)
+        for l,w in pairs(v) do
+          if type(w) == "table" and not class.unsafe(w) then -- if not already a safeaccess
+            c[l] = class.safeaccess(w)
+          end
+        end
       end
     end
 
@@ -43,7 +60,12 @@ function class.new(name, ...)
 
       -- add class methods access in classname namespace -> instance.Class.method(instance, ...)
       c[name] = class.safeaccess(c)
-      classes[name] = c -- reference class
+
+      if not classes[name] then
+        classes[name] = c -- reference class
+      else
+        print("Luaoop warning: redefinition of class "..name)
+      end
 
       return c
     end
@@ -56,35 +78,67 @@ function class.definition(name)
   return classes[name]
 end
 
--- get private space table of the instantiated object
+-- same as class.definition but returning a safe access class
+function class.safedef(name)
+  return class.safeaccess(class.definition(name), true)
+end
+
+-- get private storage table of the instantiated object
 function class.getprivate(o)
   local mtable = getmetatable(o)
   if mtable then return mtable.private else return nil end
 end
 
--- return a new table giving access to the passed table properties
+-- return a new table giving access to the passed table properties (prevents adding/removing/modifying properties)
 -- (deep, recursive safe access on subtables)
 -- useful to protect global class data from modifications (only if getmetatable is not allowed)
-function class.safeaccess(t)
-  local _t = {}
+-- works also to get a safe class definition for inheritance and instantiation
+--
+-- fclass: if passed/true, will preserve class table functionalities
+function class.safeaccess(t, fclass)
+  if t then
+    local mtable = getmetatable(t) or {}
+    local _t = {}
 
-  return setmetatable(_t, { 
-    __index = function(_t, k)
-      local v = t[k]
-      if type(v) == "table" then -- create subtable safe access
-        v = class.safeaccess(v)
-        rawset(_t,k,v) -- save access
+    local mt = {
+      safe_access = t, -- define special property to recognize safe access, save original table
+      __index = function(_t, k)
+        local v = t[k]
+        if type(v) == "table" then -- create subtable safe access
+          v = class.safeaccess(v)
+          rawset(_t,k,v) -- save access
+        end
+        
+        return v -- return regular value
       end
-      
-      return v -- return regular value
+      , __newindex = function(t,k,v) end -- prevents methods obfuscation with newindex
+    }
+
+    -- flags
+    if fclass then 
+      mt.__call = mtable.__call 
+      mt.class = true
     end
-    , __newindex = function(t,k,v) end -- prevents methods obfuscation with newindex
-  })
+
+    return setmetatable(_t, mt)
+  end
+end
+
+-- return the original table from a safe access table, or nil if not a safe access
+-- return also the safe access metatable as second return values
+function class.unsafe(safe_access)
+  local mtable = getmetatable(safe_access)
+  if mtable and mtable.safe_access then
+    return mtable.safe_access, mtable
+  end
 end
 
 -- return classname or nil if not a class or instance of class
 function class.name(t)
   local cname = nil
+
+  local c, mt = class.unsafe(t)
+  if c and mt.class then t = c end -- is safe access with class functionalities, replace with class
 
   if t ~= nil then
     local mtable = getmetatable(t)
@@ -291,30 +345,35 @@ local function op_le(lhs,rhs)
 end
 
 -- create object with a specific class and constructor arguments 
-function class.instanciate(class, ...)
-  local o = {}
+function class.instanciate(_class, ...)
+  local c, mt = class.unsafe(_class)
+  if c and mt.class then _class = c end -- is safe access with class functionalities, replace with class
 
-  -- build instance
-  local mtable = {__index = class, private = {}}
-  setmetatable(o,mtable)
+  if class.name(_class) then -- if a class
+    local o = {}
 
-  -- add operators metamethods
-  mtable.__unm = op_unm
-  mtable.__add = op_add
-  mtable.__sub = op_sub
-  mtable.__mul = op_mul
-  mtable.__div = op_div
-  mtable.__pow = op_pow
-  mtable.__mod = op_mod
-  mtable.__eq = op_eq
-  mtable.__le = op_le
-  mtable.__lt = op_lt
-  mtable.__tostring = op_tostring
-  mtable.__concat = op_concat
+    -- build instance
+    local mtable = {__index = _class, private = {}}
+    setmetatable(o,mtable)
 
-  -- construct
-  if o.__construct then o:__construct(...) end
-  return o
+    -- add operators metamethods
+    mtable.__unm = op_unm
+    mtable.__add = op_add
+    mtable.__sub = op_sub
+    mtable.__mul = op_mul
+    mtable.__div = op_div
+    mtable.__pow = op_pow
+    mtable.__mod = op_mod
+    mtable.__eq = op_eq
+    mtable.__le = op_le
+    mtable.__lt = op_lt
+    mtable.__tostring = op_tostring
+    mtable.__concat = op_concat
+
+    -- construct
+    if o.__construct then o:__construct(...) end
+    return o
+  end
 end
 
 -- SHORTCUTS
