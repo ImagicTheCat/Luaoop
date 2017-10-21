@@ -109,7 +109,8 @@ end
 ```
 
 If you seek performance over flexibility, you can call super methods like this:
-```
+
+```lua
 B = class("B", A)
 
 local s__construct = B.__construct -- cache inherited before overload
