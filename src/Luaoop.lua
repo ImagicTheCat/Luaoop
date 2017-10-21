@@ -352,6 +352,13 @@ function class.instanciate(_class, ...)
   if class.name(_class) then -- if a class
     local o = {}
 
+    -- generate safe access for _class direct tables in this instance ("hide" inherited tables)
+    for k,v in pairs(_class) do
+      if type(v) == "table" and not class.unsafe(v) then -- if not already a safeaccess
+        o[k] = class.safeaccess(v)
+      end
+    end
+
     -- build instance
     local mtable = {__index = _class, private = {}}
     setmetatable(o,mtable)
