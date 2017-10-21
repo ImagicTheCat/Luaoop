@@ -40,12 +40,11 @@ class.getprivate(o)
 -- useful to protect global class data from modifications (only if getmetatable is not allowed)
 -- works also to get a safe class definition for inheritance and instantiation
 --
--- class: if passed/true, will preserve class table functionalities (instantiation, type, etc)
-class.safeaccess(t, class)
-
+-- fclass: if passed/true, will preserve class table functionalities (instantiation, type, etc)
+class.safeaccess(t, fclass)
 
 -- return the original table from a safe access table, or nil if not a safe access
--- return also the safe access metatable as second return values
+-- return also the safe access metatable (second rvalue)
 class.unsafe(safe_access)
 
 -- return classname or nil if not a class or instance of class
@@ -70,7 +69,7 @@ class.getop(lhs_class, name, rhs_class, no_error)
 Single and multiple inheritances are possibles, "static" variables and methods (all properties) will be overridden by each new definition of the child class.
 In case of multiple inheritance with methods/members with the same name, one will be taken arbitrarily. You can solve this issue by accessing directly to a specific parent method/member using the super access.
 
-Inheritance resolving is dynamic, it means you can modify any class and the changes will be applied to already instantiated objects.
+Inheritance is resolved dynamically, it means you can modify any class and the changes will be applied to already instantiated objects.
 
 ```lua
 A = class("A")
@@ -184,3 +183,7 @@ Which let:
 * `class.instanciate`
 
 See `sandbox.lua` example for usage.
+
+## TODO
+
+* inheritance performance (cached inheritance) with modification propagation on instantiaded objects (maybe)
