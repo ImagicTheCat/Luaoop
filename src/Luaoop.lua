@@ -11,6 +11,9 @@ local function propagate_index(t,k)
   local bases = getmetatable(t).bases
   -- find key in table properties
   for l,v in pairs(bases) do
+    local p = v[k]
+    if p then return p end
+
     --[[ -- optimization (lose flexibility)
     local p = v[k]
     if p ~= nil then 
@@ -20,7 +23,6 @@ local function propagate_index(t,k)
       return p
     end
     --]]
-    return v[k]
   end
 end
 
@@ -41,7 +43,9 @@ function class.new(name, ...)
 
     -- check inheritance validity and generate safe access
     for k,v in pairs(bases) do
-      if class.name(v) == nil then
+      local mtable = getmetatable(v)
+
+      if not mtable.classname and not mtable.bases then -- if not a class
         return nil
       else -- generate safe access for bases direct tables in this class ("hide" parent tables)
         for l,w in pairs(v) do
