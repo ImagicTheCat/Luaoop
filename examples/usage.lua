@@ -1,5 +1,5 @@
 -- add package path for the example
-package.path = package.path..";../src/?.lua;"
+package.path = ";../src/?.lua;"..package.path
 
 -- lib
 local Luaoop = require("Luaoop")
@@ -103,14 +103,19 @@ print(class.type(Object))
 print(bottle*2)
 print(2*bottle)
 
+print("bottle id: "..class.instanceid(bottle))
+
 -- multiply a bottle by the same bottle
 local b = bottle*bottle
 print(b)
+
+print("b id: "..class.instanceid(b))
 
 -- sub a bottle by itself (0/0 bottle)
 b = bottle-bottle
 print(b)
 
+print("b id: "..class.instanceid(b))
 
 -- get bottle definition
 local cbottle = class.definition("Bottle")

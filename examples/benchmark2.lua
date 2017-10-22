@@ -1,5 +1,5 @@
 -- add package path for the example
-package.path = package.path..";../src/?.lua;"
+package.path = ";../src/?.lua;"..package.path
 
 -- lib
 local Luaoop = require("Luaoop")

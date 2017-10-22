@@ -32,9 +32,6 @@ class.definition(name)
 -- same as class.definition but returning a safe access class
 class.safedef(name)
 
--- get private storage table of the instantiated object
-class.getprivate(o)
-
 -- return a new table giving access to the passed table properties (prevents adding/removing/modifying properties)
 -- (deep, recursive safe access on subtables)
 -- useful to protect global class data from modifications (only if getmetatable is not allowed)
@@ -55,6 +52,13 @@ class.type(t)
 
 -- check if the instance is an instance of a specific classname
 class.instanceof(o, name)
+
+-- get private storage table of the instantiated object
+class.getprivate(o)
+
+-- return unique instance id (or nil if not an instance)
+-- works by using tostring(table) address hack or using a counter instead on failure
+class.instanceid(o)
 
 -- create object with a specific class and constructor arguments 
 class.instanciate(class, ...)

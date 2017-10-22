@@ -1,7 +1,7 @@
 -- example for Lua 5.1 only (setfenv)
 
 -- add package path for the example
-package.path = package.path..";../src/?.lua;"
+package.path = ";../src/?.lua;"..package.path
 
 -- lib
 local Luaoop = require("Luaoop")

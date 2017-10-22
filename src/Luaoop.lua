@@ -56,7 +56,7 @@ function class.new(name, ...)
       setmetatable(c,{ __index = propagate_index, bases = bases })
       return class.new(name, c) -- then single inheritance of the proxy
     else -- single inheritance
-      setmetatable(c, { __index = bases[1], classname = name, private = {}, __call = function(t, ...) return class.instanciate(c, ...) end})
+      setmetatable(c, { __index = bases[1], classname = name, __call = function(t, ...) return class.instanciate(c, ...) end})
 
       -- add class methods access in classname namespace -> instance.Class.method(instance, ...)
       c[name] = class.safeaccess(c)
@@ -64,7 +64,7 @@ function class.new(name, ...)
       if not classes[name] then
         classes[name] = c -- reference class
       else
-        print("Luaoop warning: redefinition of class "..name)
+        print("redefinition of class "..name)
       end
 
       return c
@@ -223,7 +223,7 @@ function class.getop(lhs_class, name, rhs_class, no_error)
   local f = nil
 
   local mtable = getmetatable(lhs_class)
-  if mtable and mtable.private then -- check if class or instance
+  if mtable and (mtable.private or mtable.classname) then -- check if class or instance
     local fname = nil
     if rhs_class then
       fname = "__"..name.."_"..class.type(rhs_class)
@@ -237,7 +237,7 @@ function class.getop(lhs_class, name, rhs_class, no_error)
   if f then
     return f
   elseif not no_error then
-    error("operator <"..class.type(lhs_class).."> ["..name.."] <"..class.type(rhs_class).."> undefined.")
+    error("operator <"..class.type(lhs_class).."> ["..name.."] <"..class.type(rhs_class).."> undefined")
   end
 end
 
@@ -380,6 +380,34 @@ function class.instanciate(_class, ...)
     -- construct
     if o.__construct then o:__construct(...) end
     return o
+  end
+end
+
+-- return address number from table (tostring hack, return nil on failure)
+local function table_addr(t)
+  local hex = string.match(tostring(t), ".*(0x%x+).*")
+  if hex then return tonumber(hex) end
+end
+
+local addr_counter = 0 -- addr counter in replacement of table_addr
+
+-- return unique instance id (or nil if not an instance)
+-- works by using tostring(table) address hack or using a counter instead on failure
+function class.instanceid(o)
+  if o then
+    local mtable = getmetatable(o)
+    if mtable.id then -- return existing id
+      return mtable.id
+    elseif mtable.private then  -- generate id
+      mtable.id = table_addr(o)
+
+      if not mtable.id then
+        mtable.id = addr_counter
+        addr_counter = addr_counter+1
+      end
+
+      return mtable.id
+    end
   end
 end
 
