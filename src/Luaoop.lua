@@ -105,7 +105,7 @@ function class.safeaccess(t, fclass)
       __index = function(_t, k)
         local v = t[k]
         if type(v) == "table" then -- create subtable safe access
-          v = class.safeaccess(v)
+          v = class.safeaccess(v, fclass)
           rawset(_t,k,v) -- save access
         end
         
