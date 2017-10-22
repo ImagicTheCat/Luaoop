@@ -24,6 +24,7 @@ sandbox.class = setmetatable({
   name = class.name,
   type = class.type,
   instanceof = class.instanceof,
+  instanceid = class.instanceid,
   instanciate = class.instanciate
 }, { __call = function(t, ...) return class(...)  end })
 

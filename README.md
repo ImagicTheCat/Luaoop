@@ -185,6 +185,7 @@ Which let:
 * `class.name`
 * `class.type`
 * `class.instanceof`
+* `class.instanceid`
 * `class.instanciate`
 
 See `sandbox.lua` example for usage.
