@@ -64,7 +64,7 @@ function class.new(name, ...)
       if not classes[name] then
         classes[name] = c -- reference class
       else
-        print("redefinition of class "..name)
+        error("redefinition of class "..name)
       end
 
       return c
@@ -399,7 +399,12 @@ function class.instanceid(o)
     if mtable.id then -- return existing id
       return mtable.id
     elseif mtable.private then  -- generate id
+      -- remove tostring proxy
+      mtable.__tostring = nil
+      -- generate addr
       mtable.id = table_addr(o)
+      -- reset tostring proxy
+      mtable.__tostring = op_tostring
 
       if not mtable.id then
         mtable.id = addr_counter
