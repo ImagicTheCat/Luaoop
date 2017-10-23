@@ -1,5 +1,7 @@
 local Luaoop = {}
 
+local lua5_1 = (string.find(_VERSION, "5.1") ~= nil)
+
 -- CLASS MODULE
 
 local class = {}
@@ -381,8 +383,25 @@ function class.instanciate(_class, ...)
     mtable.__tostring = op_tostring
     mtable.__concat = op_concat
 
+    local constructor = o.__construct
+    local destructor = o.__destruct
+
+    if destructor then
+      local gc = function()
+        destructor(o)
+      end
+
+      if lua5_1 then -- Lua 5.1
+        local proxy = newproxy(true)
+        getmetatable(proxy).__gc = gc
+        mtable.proxy = proxy
+      else
+        mtable.proxy = setmetatable({}, { __gc = gc })
+      end
+    end
+
     -- construct
-    if o.__construct then o:__construct(...) end
+    if constructor then constructor(o, ...) end
     return o
   end
 end

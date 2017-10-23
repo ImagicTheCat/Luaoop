@@ -133,6 +133,7 @@ Every special method start with `__` (they are not metamethods, they are named l
 ### Misc
 
 * `construct`: called at initialization
+* `destruct`: called at garbage collection
 
 ### Operators (or things similar)
 
