@@ -141,6 +141,7 @@ Object:__op_rhstype(rhs) -- binary
 ```
 
 Unary
+* `call`: like the metamethod
 * `tostring`: like the metamethod
 * `unm`: like the metamethod
 

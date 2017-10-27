@@ -285,6 +285,11 @@ local function op_unm(lhs)
   if f then return f(lhs) end
 end
 
+local function op_call(lhs, ...)
+  local f = getop(lhs, "call", nil)
+  if f then return f(lhs, ...) end
+end
+
 local function op_add(lhs,rhs)
   local f = getop(lhs, "add", rhs, true)
   if f then 
@@ -386,6 +391,7 @@ function class.instanciate(_class, ...)
       instance = true,
 
       -- add operators metamethods
+      __call = op_call,
       __unm = op_unm,
       __add = op_add,
       __sub = op_sub,
