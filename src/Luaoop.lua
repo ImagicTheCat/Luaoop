@@ -28,10 +28,29 @@ local function propagate_index(t,k)
   end
 end
 
+-- return private context or nil
+local function class_pow_instance(c, o)
+  local cmtable = getmetatable(c)
+
+  if o then
+    local omtable = getmetatable(o)
+    if omtable and omtable.instance then
+      local key = cmtable.classname.."_p"
+      local private = omtable[key]
+      if not private then
+        private = {}
+        omtable[key] = private
+      end
+
+      return private
+    end
+  end
+end
+
 -- create a new class with the passed identifier (following the Lua name notation, no special chars except underscore) and base classes (multiple inheritance possible)
 -- return class or nil if name/base classes are invalid
 function class.new(name, ...)
-  if type(name) == "string" then
+  if type(name) == "string" and string.len(name) > 0 then
     local c = {}
     local bases = {...}
 
@@ -62,7 +81,7 @@ function class.new(name, ...)
       setmetatable(c,{ __index = propagate_index, bases = bases })
       return class.new(name, c) -- then single inheritance of the proxy
     else -- single inheritance
-      setmetatable(c, { __index = bases[1], classname = name, __call = function(t, ...) return class.instanciate(c, ...) end})
+      setmetatable(c, { __index = bases[1], class = true, classname = name, __call = class.instanciate, __pow = class_pow_instance})
 
       -- add class methods access in classname namespace -> instance.Class.method(instance, ...)
       c[name] = class.safeaccess(c)
@@ -87,12 +106,6 @@ end
 -- same as class.definition but returning a safe access class
 function class.safedef(name)
   return class.safeaccess(class.definition(name), true)
-end
-
--- get private storage table of the instantiated object
-function class.getprivate(o)
-  local mtable = getmetatable(o)
-  if mtable then return mtable.private else return nil end
 end
 
 -- return a new table giving access to the passed table properties (prevents adding/removing/modifying properties)
@@ -229,7 +242,7 @@ function class.getop(lhs_class, name, rhs_class, no_error)
   local f = nil
 
   local mtable = getmetatable(lhs_class)
-  if mtable and (mtable.private or mtable.classname) then -- check if class or instance
+  if mtable and (mtable.instance or mtable.classname) then -- check if class or instance
     local fname = nil
     if rhs_class then
       fname = "__"..name.."_"..class.type(rhs_class)
@@ -355,7 +368,9 @@ function class.instanciate(_class, ...)
   local c, mt = class.unsafe(_class)
   if c and mt.class then _class = c end -- is safe access with class functionalities, replace with class
 
-  if class.name(_class) then -- if a class
+  local cmtable = getmetatable(_class)
+
+  if cmtable.class and cmtable.classname then -- if a class
     local o = {}
 
     -- generate safe access for _class direct tables in this instance ("hide" inherited tables)
@@ -366,22 +381,26 @@ function class.instanciate(_class, ...)
     end
 
     -- build instance
-    local mtable = {__index = _class, private = {}}
-    setmetatable(o,mtable)
+    local mtable = {
+      __index = _class, 
+      instance = true,
 
-    -- add operators metamethods
-    mtable.__unm = op_unm
-    mtable.__add = op_add
-    mtable.__sub = op_sub
-    mtable.__mul = op_mul
-    mtable.__div = op_div
-    mtable.__pow = op_pow
-    mtable.__mod = op_mod
-    mtable.__eq = op_eq
-    mtable.__le = op_le
-    mtable.__lt = op_lt
-    mtable.__tostring = op_tostring
-    mtable.__concat = op_concat
+      -- add operators metamethods
+      __unm = op_unm,
+      __add = op_add,
+      __sub = op_sub,
+      __mul = op_mul,
+      __div = op_div,
+      __pow = op_pow,
+      __mod = op_mod,
+      __eq = op_eq,
+      __le = op_le,
+      __lt = op_lt,
+      __tostring = op_tostring,
+      __concat = op_concat
+    }
+
+    setmetatable(o,mtable)
 
     local constructor = o.__construct
     local destructor = o.__destruct
@@ -421,7 +440,7 @@ function class.instanceid(o)
     local mtable = getmetatable(o)
     if mtable.id then -- return existing id
       return mtable.id
-    elseif mtable.private then  -- generate id
+    elseif mtable.instance then  -- generate id
       -- remove tostring proxy
       mtable.__tostring = nil
       -- generate addr

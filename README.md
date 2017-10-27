@@ -53,9 +53,6 @@ class.type(t)
 -- check if the instance is an instance of a specific classname
 class.instanceof(o, name)
 
--- get private storage table of the instantiated object
-class.getprivate(o)
-
 -- return unique instance id (or nil if not an instance)
 -- works by using tostring(table) address hack or using a counter instead on failure
 class.instanceid(o)
@@ -163,10 +160,41 @@ Be careful with `eq`, `le`, `lt`, they will be called like any binary operator, 
 
 Comparison of different instances with different types is possible, but this may change in the future.
 
+## Private members
+
+Private methods can be achieved with local functions in the class definition, but "private members" are instance dependents.
+
+Each instance can have a private table per class definition (the instance is not required to be an instance of the class).
+To access this private table, the `Class^instance` operator is used. This operator only works with original definitions (not with a safe access class).
+
+```lua
+A = class("A")
+safe_A = class.safeaccess(A, true)
+
+function A:__construct()
+  local private = A^self
+  private.a = 42;
+end
+
+B = class("B", A)
+
+function B:__construct()
+  self.A.__construct(self)
+
+  -- to access the A private table, direct access to A definition is required
+  local private_A = A^self -- private table
+  -- local private_A = self.A^self -- error
+  -- local private_A = safe_A^self -- error
+end
+```
+
+Good practice is to cache the private table when doing multiple operations in the same call to prevent overhead. 
+The goal of private tables is to prevent access to critical members. It may be used to prevent collisions of instance properties, but a prefix is more natural for "public/protected" members.
+
 ## "Security / Sandbox"
 
-Luaoop doesn't aim to "sandbox" things, but if you want to add private properties to the object instances (for example, to keep a luajit FFI pointer away from users), use the `class.getprivate` function and remove it from the user env (`class.getprivate` use `getmetatable`, so you will need to remove it too).
-Instantiated objects are safe to handle, users can't touch the class definitions from the instance if they don't have access to the original class table (for example, an enumeration in a class should not be modified from the instance and any child class).
+Luaoop doesn't aim to "sandbox" things, but if you want to add private properties to the object instances (for example, to keep a luajit FFI pointer away from users), create a base class and use the class private operator to access the private instance table, then never give the original class definition to users.
+Instantiated objects are safe to handle, users can't touch the class definitions from the instance if they don't have access to the original class table (for example, an enumeration in a class should not be modified from the instance or any child class).
 
 With some tweaks, you can allow scripts to create classes based on other classes, without allowing them to mess with the previous definitions.
 
@@ -177,7 +205,6 @@ Here are a non-exhaustive list of functions you should remove from the sandbox f
 * `rawget`
 * `class.unsafe`
 * `class.definition`
-* `class.getprivate`
 
 Which let:
 * `class.new`
