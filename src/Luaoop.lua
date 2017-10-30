@@ -66,7 +66,7 @@ function class.new(name, ...)
     for k,v in pairs(bases) do
       local mtable = getmetatable(v)
 
-      if not mtable.classname and not mtable.bases then -- if not a class
+      if not mtable or (not mtable.classname and not mtable.bases) then -- if not a class
         return nil
       else -- generate safe access for bases direct tables in this class ("hide" parent tables)
         for l,w in pairs(v) do
