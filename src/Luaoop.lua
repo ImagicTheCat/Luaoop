@@ -28,6 +28,28 @@ local function propagate_index(t,k)
   end
 end 
 
+-- force an instance to have a custom mtable (by default they share the same table for optimization)
+-- mtable: current instance mtable
+-- o: instance
+-- return custom mtable
+local function force_custom_mtable(mtable, o)
+  if not mtable.custom then
+    -- copy mtable
+    local new_mtable = {}
+    for k,v in pairs(mtable) do
+      new_mtable[k] = v
+    end
+
+    -- flag custom
+    new_mtable.custom = true
+    setmetatable(o, new_mtable)
+
+    mtable = new_mtable
+  end
+
+  return mtable
+end
+
 -- private access name optimization
 local private_dict = {}
 
@@ -38,6 +60,9 @@ local function class_pow_instance(c, o)
   if o then
     local omtable = getmetatable(o)
     if omtable and omtable.instance then
+      omtable = force_custom_mtable(omtable, o) -- private access requires custom properties
+
+      -- get/gen key
       local key = private_dict[cmtable.classname]
       if not key then
         key = cmtable.classname.."_p"
@@ -389,6 +414,9 @@ local function op_le(lhs,rhs)
   end
 end
 
+-- optimize instanciation for basic instances (no custom mtable properties)
+local insmt_dict = {}
+
 -- create object with a specific class and constructor arguments 
 function class.instanciate(_class, ...)
   local c, mt = class.unsafe(_class)
@@ -406,26 +434,31 @@ function class.instanciate(_class, ...)
       end
     end
 
-    -- build instance
-    local mtable = {
-      __index = _class, 
-      instance = true,
+    local mtable = insmt_dict[cmtable.classname]
+    if not mtable then
+      -- build instance
+      mtable = {
+        __index = _class, 
+        instance = true,
 
-      -- add operators metamethods
-      __call = op_call,
-      __unm = op_unm,
-      __add = op_add,
-      __sub = op_sub,
-      __mul = op_mul,
-      __div = op_div,
-      __pow = op_pow,
-      __mod = op_mod,
-      __eq = op_eq,
-      __le = op_le,
-      __lt = op_lt,
-      __tostring = op_tostring,
-      __concat = op_concat
-    }
+        -- add operators metamethods
+        __call = op_call,
+        __unm = op_unm,
+        __add = op_add,
+        __sub = op_sub,
+        __mul = op_mul,
+        __div = op_div,
+        __pow = op_pow,
+        __mod = op_mod,
+        __eq = op_eq,
+        __le = op_le,
+        __lt = op_lt,
+        __tostring = op_tostring,
+        __concat = op_concat
+      }
+
+      insmt_dict[cmtable.classname] = mtable
+    end
 
     setmetatable(o,mtable)
 
@@ -433,6 +466,8 @@ function class.instanciate(_class, ...)
     local destructor = o.__destruct
 
     if destructor then
+      mtable = force_custom_mtable(mtable, o) -- gc requires custom properties
+
       local gc = function()
         destructor(o)
       end
@@ -465,6 +500,8 @@ local addr_counter = 0 -- addr counter in replacement of table_addr
 function class.instanceid(o)
   if o then
     local mtable = getmetatable(o)
+    mtable = force_custom_mtable(mtable, o) -- instanceid requires custom properties
+
     if mtable.id then -- return existing id
       return mtable.id
     elseif mtable.instance then  -- generate id
