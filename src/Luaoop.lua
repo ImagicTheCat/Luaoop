@@ -233,9 +233,8 @@ function class.instanceof(o, name)
   return false
 end
 
--- contains operators definitions
-local ops = {}
-
+-- optimize special method name resolution
+local op_dict = {}
 
 -- get operator from instance/class, rhs_class can be nil for unary operators
 function class.getop(lhs_class, name, rhs_class, no_error)
@@ -243,11 +242,25 @@ function class.getop(lhs_class, name, rhs_class, no_error)
 
   local mtable = getmetatable(lhs_class)
   if mtable and (mtable.instance or mtable.classname) then -- check if class or instance
-    local fname = nil
-    if rhs_class then
-      fname = "__"..name.."_"..class.type(rhs_class)
-    else
-      fname = "__"..name
+    local rtype = class.type(rhs_class)
+
+    -- optimization using op_dict
+    local dict = op_dict[name]
+    if not dict then
+      dict = {}
+      op_dict[name] = dict
+    end
+
+    -- method name
+    local fname = dict[rtype]
+    if not fname then -- generate fname
+      if rhs_class then
+        fname = "__"..name.."_"..rtype
+      else
+        fname = "__"..name
+      end
+
+      dict[rtype] = fname
     end
 
     f = lhs_class[fname]
