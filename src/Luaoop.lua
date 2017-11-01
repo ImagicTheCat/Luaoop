@@ -8,23 +8,19 @@ local class = {}
 
 local classes = {}
 
--- __index used for multiple inheritance
-local function propagate_index(t,k)
+-- __index used for class inheritance (no optimization, safe access)
+local function class_index(t,k)
   local bases = getmetatable(t).bases
   -- find key in table properties
   for l,v in pairs(bases) do
     local p = v[k]
-    if p then return p end
-
-    --[[ -- optimization (lose flexibility)
-    local p = v[k]
-    if p ~= nil then 
-      if type(p) == "table" or type(p) == "function" then
-        t[k] = p -- direct access optimization after first access, if table
+    if p then
+      if type(p) == "table" then
+        return class.safeaccess(p)
+      else
+        return p
       end
-      return p
     end
-    --]]
   end
 end 
 
@@ -81,7 +77,7 @@ local function class_pow_instance(c, o)
 end
 
 -- create a new class with the passed identifier (following the Lua name notation, no special chars except underscore) and base classes (multiple inheritance possible)
--- return class or nil if name/base classes are invalid
+-- return new class
 function class.new(name, ...)
   if type(name) == "string" and string.len(name) > 0 then
     local c = {}
@@ -100,21 +96,15 @@ function class.new(name, ...)
       local mtable = getmetatable(v)
 
       if not mtable or (not mtable.classname and not mtable.bases) then -- if not a class
-        return nil
-      else -- generate safe access for bases direct tables in this class ("hide" parent tables)
-        for l,w in pairs(v) do
-          if type(w) == "table" and not class.unsafe(w) then -- if not already a safeaccess
-            c[l] = class.safeaccess(w)
-          end
-        end
+        error("invalid class definition "..name)
       end
     end
 
     if #bases > 1 then -- multiple inheritance, proxy
-      setmetatable(c,{ __index = propagate_index, bases = bases })
+      setmetatable(c,{ __index = class_index, bases = bases })
       return class.new(name, c) -- then single inheritance of the proxy
     else -- single inheritance
-      setmetatable(c, { __index = bases[1], class = true, classname = name, __call = class.instanciate, __pow = class_pow_instance})
+      setmetatable(c, { __index = class_index, bases = bases, class = true, classname = name, __call = class.instanciate, __pow = class_pow_instance})
 
       -- add class methods access in classname namespace -> instance.Class.method(instance, ...)
       c[name] = class.safeaccess(c)
@@ -150,29 +140,33 @@ end
 function class.safeaccess(t, fclass)
   if t then
     local mtable = getmetatable(t) or {}
-    local _t = {}
+    if not mtable.safe_access then -- check if not already a safeaccess
+      local _t = {}
 
-    local mt = {
-      safe_access = t, -- define special property to recognize safe access, save original table
-      __index = function(_t, k)
-        local v = t[k]
-        if type(v) == "table" then -- create subtable safe access
-          v = class.safeaccess(v, fclass)
-          rawset(_t,k,v) -- save access
+      local mt = {
+        safe_access = t, -- define special property to recognize safe access, save original table
+        __index = function(_t, k)
+          local v = t[k]
+          if type(v) == "table" then -- create subtable safe access
+            v = class.safeaccess(v, fclass)
+            rawset(_t,k,v) -- save access
+          end
+          
+          return v -- return regular value
         end
-        
-        return v -- return regular value
+        , __newindex = function(t,k,v) end -- prevents methods obfuscation with newindex
+      }
+
+      -- flags
+      if fclass then 
+        mt.__call = mtable.__call 
+        mt.class = true
       end
-      , __newindex = function(t,k,v) end -- prevents methods obfuscation with newindex
-    }
 
-    -- flags
-    if fclass then 
-      mt.__call = mtable.__call 
-      mt.class = true
+      return setmetatable(_t, mt)
+    else
+      return t
     end
-
-    return setmetatable(_t, mt)
   end
 end
 
@@ -252,8 +246,8 @@ function class.instanceof(o, name)
       if classlist ~= nil then return classlist[name] ~= nil end
 
       -- first unoptimized call, build list
-      mtable.classlist = {}
-      classlist = mtable.classlist
+      classlist = {}
+      mtable.classlist = classlist
 
       -- add all class names to the list
       fill_classlist(classlist,mtable)
@@ -414,7 +408,24 @@ local function op_le(lhs,rhs)
   end
 end
 
--- optimize instanciation for basic instances (no custom mtable properties)
+-- __index used for instance inheritance (optimization)
+local function instance_index(t,k)
+  local mtable = getmetatable(t)
+  local p = mtable.class[k]
+
+  if p then
+    if type(p) == "table" then
+      p = class.safeaccess(p)
+    end
+  else
+    p = false -- force nil properties to be marked as false (optimization)
+  end
+
+  t[k] = p -- cache property 
+  return p
+end
+
+-- instantiated type mtables, optimize instanciation (no custom mtable properties)
 local insmt_dict = {}
 
 -- create object with a specific class and constructor arguments 
@@ -427,19 +438,16 @@ function class.instanciate(_class, ...)
   if cmtable.class and cmtable.classname then -- if a class
     local o = {}
 
-    -- generate safe access for _class direct tables in this instance ("hide" inherited tables)
-    for k,v in pairs(_class) do
-      if type(v) == "table" and not class.unsafe(v) then -- if not already a safeaccess
-        o[k] = class.safeaccess(v)
-      end
-    end
-
     local mtable = insmt_dict[cmtable.classname]
     if not mtable then
-      -- build instance
+      -- build generic instance mtable
+
+      local index = setmetatable({}, { __index = instance_index, class = _class }) -- instance type index 
+
       mtable = {
-        __index = _class, 
+        __index = index, 
         instance = true,
+        classname = cmtable.classname,
 
         -- add operators metamethods
         __call = op_call,
@@ -484,6 +492,25 @@ function class.instanciate(_class, ...)
     -- construct
     if constructor then constructor(o, ...) end
     return o
+  end
+end
+
+-- propagate definition changes to specified string instance types
+-- (this function is not about class propagation, but instance type propagation)
+-- (you need to call if for every instantiated types that should use the new modifications)
+-- ...: list of types (strings) that will be updated
+function class.propagate(...)
+  for k,v in pairs({...}) do
+    local mtable = insmt_dict[v]
+    if mtable then
+      -- remove instantiated type cached properties
+      local index = mtable.__index
+      for k,v in pairs(index) do
+        index[k] = nil
+      end
+    else
+      error(v.." is not an instantiated type")
+    end
   end
 end
 

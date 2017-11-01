@@ -24,6 +24,34 @@ end
 
 print("time = "..(os.clock()-time).." s")
 
+print("\nbenchmark method resolution")
+
+local base = nil
+local n = 10
+for i=1,n do 
+  base = class("Base"..i, base)
+  local prev = "Base"..(i-1)
+
+  function base:f()
+    local v = 1
+    local namespace = self[prev]
+    if namespace then
+      v = namespace.f(self)+1
+    end
+
+    return v
+  end
+end
+
+time = os.clock()
+local b = base()
+print(b:f())
+for i=1,20000000 do
+  b:f()
+end
+
+print("time = "..(os.clock()-time).." s")
+
 print("\nbenchmark private access")
 
 time = os.clock()
