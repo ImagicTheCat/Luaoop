@@ -80,7 +80,7 @@ Class inheritance is resolved dynamically, it means that the access to a Class p
 
 Instead, instance methods/properties are cached for each instance type when accessed the first time, this means that modifications of parent methods or direct parent properties will require a `class.propagate` for any instantiated type that should be affected by the changes. `class.propagate` is not about Class properties propagation, but instantiated type properties propagation, it will trigger an error when used for uninstantiated types.
 
-**NOTE: when accessing a non-existent instance method/property, the property is cached as `false` for optimization. **
+*NOTE: when accessing a non-existent instance method/property, the property is cached as `false` for optimization.*
 
 ```lua
 A = class("A")
