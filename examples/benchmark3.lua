@@ -12,7 +12,7 @@ function Object:__pow_number(n)
   return n
 end
 
--- benchmark operator resolution
+print("benchmark operator resolution")
 
 local o = Object()
 print(o^42)
@@ -20,6 +20,15 @@ print(o^42)
 local time = os.clock()
 for i=1,20000000 do
   local r = o^i
+end
+
+print("time = "..(os.clock()-time).." s")
+
+print("\nbenchmark private access")
+
+time = os.clock()
+for i=1,20000000 do
+  local private = Object^o
 end
 
 print("time = "..(os.clock()-time).." s")

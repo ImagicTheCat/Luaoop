@@ -26,7 +26,10 @@ local function propagate_index(t,k)
     end
     --]]
   end
-end
+end 
+
+-- private access name optimization
+local private_dict = {}
 
 -- return private context or nil
 local function class_pow_instance(c, o)
@@ -35,7 +38,12 @@ local function class_pow_instance(c, o)
   if o then
     local omtable = getmetatable(o)
     if omtable and omtable.instance then
-      local key = cmtable.classname.."_p"
+      local key = private_dict[cmtable.classname]
+      if not key then
+        key = cmtable.classname.."_p"
+        private_dict[cmtable.classname] = key
+      end
+
       local private = omtable[key]
       if not private then
         private = {}
