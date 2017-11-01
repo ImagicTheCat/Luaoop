@@ -226,6 +226,7 @@ Which let:
 * `class.instanceof`
 * `class.instanceid`
 * `class.instanciate`
+* `class.propagate`
 
 See `sandbox.lua` example for usage.
 
