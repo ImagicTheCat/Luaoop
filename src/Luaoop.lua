@@ -495,9 +495,9 @@ function class.instanciate(_class, ...)
   end
 end
 
--- propagate definition changes to specified string instance types
--- (this function is not about class propagation, but instance type propagation)
--- (you need to call if for every instantiated types that should use the new modifications)
+-- propagate changes for the specified string instance types
+-- this function is not about class propagation (since class properties are not cached), but instance type propagation
+-- you need to call it for every instantiated types that should inherit the new modifications
 -- ...: list of types (strings) that will be updated
 function class.propagate(...)
   for k,v in pairs({...}) do

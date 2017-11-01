@@ -61,6 +61,12 @@ class.instanceid(o)
 class.instanciate(class, ...)
 -- SHORTCUT Class(...)
 
+-- propagate changes for the specified string instance types
+-- this function is not about class propagation (since class properties are not cached), but instance type propagation
+-- you need to call it for every instantiated types that should inherit the new modifications
+-- ...: list of types (strings) that will be updated
+class.propagate(...)
+
 -- (internal) get operator from instance/class, rhs_class can be nil for unary operators
 class.getop(lhs_class, name, rhs_class, no_error)
 ```
@@ -68,9 +74,11 @@ class.getop(lhs_class, name, rhs_class, no_error)
 ## Inheritance
 
 Single and multiple inheritances are possibles, "static" variables and methods (all properties) will be overridden by each new definition of the child class.
-In case of multiple inheritance with methods/members with the same name, one will be taken arbitrarily. You can solve this issue by accessing directly to a specific parent method/member using the super access.
+In case of multiple inheritance with methods/members with the same name, one will be taken arbitrarily. You can solve this issue by accessing directly to a specific parent method/member using the namespace access.
 
-Inheritance is resolved dynamically, it means you can modify any class and the changes will be applied to already instantiated objects.
+Class inheritance is resolved dynamically, it means that the access to a Class property (through a safe access, the instance namespace or in a child class) is not cached, so changes will be directly applied.
+
+Instead, instance methods/properties are cached for each instance type when accessed the first time, this means that modifications of parent methods or direct parent properties will require a `class.propagate` for any instantiated type that should be affected by the changes. `class.propagate` is not about Class properties propagation, but instantiated type propagation, it will trigger an error when used for uninstantiated types.
 
 ```lua
 A = class("A")
@@ -90,7 +98,7 @@ end
 
 ```
 
-## Super access
+## Namespace access
 
 You can access any parent class method in the instance with the namespace named as the desired class.
 

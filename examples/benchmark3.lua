@@ -24,17 +24,17 @@ end
 
 print("time = "..(os.clock()-time).." s")
 
-print("\nbenchmark method resolution")
+print("\nbenchmark overload method resolution")
 
 local base = nil
-local n = 10
+local n = 4
 for i=1,n do 
   base = class("Base"..i, base)
   local prev = "Base"..(i-1)
 
   function base:f()
-    local v = 1
     local namespace = self[prev]
+    local v = 1
     if namespace then
       v = namespace.f(self)+1
     end

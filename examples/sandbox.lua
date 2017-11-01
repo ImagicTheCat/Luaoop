@@ -74,6 +74,7 @@ function main_sandbox()
     print("new human")
 
     self.Entity.enum = {TEST = 42}
+    self.enum = nil
     self.enum.TEST = 42 -- enum inheritance, try to modify
     self.Entity.enum.TEST = 42 
     print("self.enum.TEST still "..self.enum.TEST) -- still 0
