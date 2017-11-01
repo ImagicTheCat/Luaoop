@@ -229,7 +229,3 @@ Which let:
 * `class.propagate`
 
 See `sandbox.lua` example for usage.
-
-## TODO
-
-* inheritance performance (cached inheritance) with modification propagation on instantiaded objects (maybe)
