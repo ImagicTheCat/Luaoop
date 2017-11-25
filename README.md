@@ -73,14 +73,14 @@ class.getop(lhs_class, name, rhs_class, no_error)
 
 ## Inheritance
 
-Single and multiple inheritances are possibles, "static" variables and methods (all properties) will be overridden by each new definition of the child class.
-In case of multiple inheritance with methods/members with the same name, one will be taken arbitrarily. You can solve this issue by accessing directly to a specific parent method/member using the namespace access.
+Single and multiple inheritances are possibles, only direct functions will be overridden by each new definition of the child class.
+In case of multiple inheritance with functions with the same name, one will be taken arbitrarily. You can solve this issue by accessing directly to a specific parent method/function using the class definition.
 
-Class inheritance is resolved dynamically, it means that the access to a Class property (through a safe access, the instance namespace or in a child class) is not cached, so changes will be directly applied.
+Class inheritance is resolved dynamically, it means that the access to a Class function (through a safe access or in a child class) is not cached, so changes will be directly applied.
 
-Instead, instance methods/properties are cached for each instance type when accessed the first time, this means that modifications of parent methods or direct parent properties will require a `class.propagate` for any instantiated type that should be affected by the changes. `class.propagate` is not about Class properties propagation, but instantiated type properties propagation, it will trigger an error when used for uninstantiated types.
+Instead, instance functions are cached for each instance type when accessed the first time, this means that modifications of parent methods will require a `class.propagate` for any instantiated type that should be affected by the changes. `class.propagate` is not about Class functions propagation, but instantiated type functions propagation, it will trigger an error when used for uninstantiated types.
 
-*NOTE: when accessing a non-existent instance method/property, the property is cached as `false` for optimization.*
+*NOTE: when accessing a non-existent instance method, the property is cached as `false` for optimization.*
 
 ```lua
 A = class("A")
@@ -95,14 +95,14 @@ end
 
 C = class("C", A, B) -- inheritance from A and B
 function C:test() -- force the usage of B:test()
-  self.B.test(self)
+  B.test(self)
 end
 
 ```
 
-## Namespace access
+## Super methods
 
-You can access any parent class method in the instance with the namespace named as the desired class.
+You can access any parent class method using the class/safeclass directly.
 
 Example:
 ```lua
@@ -114,7 +114,7 @@ end
 
 B = class("B", A)
 function B:__construct()
-  self.A.__construct(self) -- call parent (A) constructor
+  A.__construct(self) -- call parent (A) constructor
   print("b")
 end
 ```
@@ -190,11 +190,10 @@ end
 B = class("B", A)
 
 function B:__construct()
-  self.A.__construct(self)
+  A.__construct(self)
 
   -- to access the A private table, direct access to A definition is required
   local private_A = A^self -- private table
-  -- local private_A = self.A^self -- error
   -- local private_A = safe_A^self -- error
 end
 ```

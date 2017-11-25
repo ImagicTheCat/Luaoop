@@ -31,8 +31,8 @@ end
 local C = class("C", A, B)
 
 function C:__construct()
-  self.A.__construct(self)
-  self.B.__construct(self)
+  A.__construct(self)
+  B.__construct(self)
   print("C constructor")
 end
 

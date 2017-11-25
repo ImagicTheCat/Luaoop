@@ -30,11 +30,7 @@ end
 Bottle = class("Bottle", Object)
 
 function Bottle:__construct(max)
-  self.Object.__construct(self)
-
-  -- try to change the value, without success
-  print(self.Object.color.GREEN)
-  self.Object.color.GREEN = 42
+  Object.__construct(self)
 
   self.max = max
   self.amount = 0

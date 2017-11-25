@@ -29,14 +29,13 @@ print("\nbenchmark overload method resolution")
 local base = nil
 local n = 4
 for i=1,n do 
+  local prev = base
   base = class("Base"..i, base)
-  local prev = "Base"..(i-1)
 
   function base:f()
-    local namespace = self[prev]
     local v = 1
-    if namespace then
-      v = namespace.f(self)+1
+    if prev then
+      v = prev.f(self)+1
     end
 
     return v

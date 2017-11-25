@@ -70,22 +70,12 @@ function main_sandbox()
 
   -- overload
   function Human:__construct()
-    self.Entity.__construct(self)
+    Entity.__construct(self)
     print("new human")
-
-    self.Entity.enum = {TEST = 42}
-    self.enum = nil
-    self.enum.TEST = 42 -- enum inheritance, try to modify
-    self.Entity.enum.TEST = 42 
-    print("self.enum.TEST still "..self.enum.TEST) -- still 0
-
-    -- try to instantiate an Entity from the inner class reference
-    -- print(class.instanciate(self.Entity)) -- nil
-    -- print(self.Entity()) -- error
   end
 
   function Human:speak()
-    self.Entity.speak(self)
+    Entity.speak(self)
     print("I am also an human.")
   end
 

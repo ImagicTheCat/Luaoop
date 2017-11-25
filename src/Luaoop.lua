@@ -14,12 +14,8 @@ local function class_index(t,k)
   -- find key in table properties
   for l,v in pairs(bases) do
     local p = v[k]
-    if p then
-      if type(p) == "table" then
-        return class.safeaccess(p)
-      else
-        return p
-      end
+    if type(p) == "function" then
+      return p
     end
   end
 end 
@@ -413,15 +409,11 @@ local function instance_index(t,k)
   local mtable = getmetatable(t)
   local p = mtable.class[k]
 
-  if p then
-    if type(p) == "table" then
-      p = class.safeaccess(p)
-    end
-  else
+  if type(p) ~= "function" then
     p = false -- force nil properties to be marked as false (optimization)
   end
 
-  t[k] = p -- cache property 
+  t[k] = p -- cache function 
   return p
 end
 

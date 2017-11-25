@@ -25,7 +25,7 @@ local safe_A = class.safeaccess(A, true)
 B = class("B", safe_A)
 
 function B:__construct(name)
-  self.A.__construct(self, name)
+  A.__construct(self, name)
 
   print((B^self).name) -- nil, A private is not B private
   -- local private = safe_A^self -- error, only original class can access private

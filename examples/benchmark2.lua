@@ -10,14 +10,13 @@ function test(n)
 
   local base = nil
   for i=1,n do 
+    local prev = base
     base = class(n.."Class"..i, base)
-    local prev = n.."Class"..(i-1)
 
     function base:f()
       local v = 1
-      local namespace = self[prev]
-      if namespace then
-        v = namespace.f(self)+1
+      if prev then
+        v = prev.f(self)+1
       end
 
       return v

@@ -29,7 +29,7 @@ r:test() -- "rock"
 -- redefine Rock:test()
 
 function Rock:test()
-  self.Object.test(self)
+  Object.test(self)
   print("rock new")
 end
 
