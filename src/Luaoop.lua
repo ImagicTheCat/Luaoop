@@ -420,47 +420,58 @@ end
 -- instantiated type mtables, optimize instanciation (no custom mtable properties)
 local insmt_dict = {}
 
+-- get the class metatable applied to the instances
+-- useful to apply class behaviour to a custom table
+-- (not a safe access)
+function class.meta(_class)
+  if _class then
+    local cmtable = getmetatable(_class)
+
+    if cmtable and cmtable.class and cmtable.classname then -- if a class
+      local mtable = insmt_dict[cmtable.classname]
+      if not mtable then
+        -- build generic instance mtable
+        local index = setmetatable({}, { __index = instance_index, class = _class }) -- instance type index 
+
+        mtable = {
+          __index = index, 
+          instance = true,
+          classname = cmtable.classname,
+
+          -- add operators metamethods
+          __call = op_call,
+          __unm = op_unm,
+          __add = op_add,
+          __sub = op_sub,
+          __mul = op_mul,
+          __div = op_div,
+          __pow = op_pow,
+          __mod = op_mod,
+          __eq = op_eq,
+          __le = op_le,
+          __lt = op_lt,
+          __tostring = op_tostring,
+          __concat = op_concat
+        }
+
+        insmt_dict[cmtable.classname] = mtable
+      end
+
+      return mtable
+    end
+  end
+end
+
 -- create object with a specific class and constructor arguments 
 function class.instanciate(_class, ...)
   local c, mt = class.unsafe(_class)
   if c and mt.class then _class = c end -- is safe access with class functionalities, replace with class
 
-  local cmtable = getmetatable(_class)
+  local mtable = class.meta(_class) -- get class meta
 
-  if cmtable.class and cmtable.classname then -- if a class
-    local o = {}
-
-    local mtable = insmt_dict[cmtable.classname]
-    if not mtable then
-      -- build generic instance mtable
-
-      local index = setmetatable({}, { __index = instance_index, class = _class }) -- instance type index 
-
-      mtable = {
-        __index = index, 
-        instance = true,
-        classname = cmtable.classname,
-
-        -- add operators metamethods
-        __call = op_call,
-        __unm = op_unm,
-        __add = op_add,
-        __sub = op_sub,
-        __mul = op_mul,
-        __div = op_div,
-        __pow = op_pow,
-        __mod = op_mod,
-        __eq = op_eq,
-        __le = op_le,
-        __lt = op_lt,
-        __tostring = op_tostring,
-        __concat = op_concat
-      }
-
-      insmt_dict[cmtable.classname] = mtable
-    end
-
-    setmetatable(o,mtable)
+  if mtable then -- valid meta
+    -- create instance
+    local o = setmetatable({},mtable) 
 
     local constructor = o.__construct
     local destructor = o.__destruct

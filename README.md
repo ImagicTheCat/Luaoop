@@ -57,6 +57,11 @@ class.instanceof(o, name)
 -- works by using tostring(table) address hack or using a counter instead on failure
 class.instanceid(o)
 
+-- get the class metatable applied to the instances
+-- useful to apply class behaviour to a custom table
+-- (not a safe access)
+class.meta(class)
+
 -- create object with a specific class and constructor arguments 
 class.instanciate(class, ...)
 -- SHORTCUT Class(...)
@@ -215,6 +220,7 @@ Here are a non-exhaustive list of functions you should remove from the sandbox f
 * `rawget`
 * `class.unsafe`
 * `class.definition`
+* `class.meta`
 
 Which let:
 * `class.new`
