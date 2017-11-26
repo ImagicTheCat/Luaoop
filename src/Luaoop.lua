@@ -560,4 +560,102 @@ end})
 -- NAMESPACES
 Luaoop.class = class
 
+
+
+-- LuaJIT CCLASS MODULE
+
+if jit then
+
+local ffi = require("ffi")
+local cclass = {}
+
+local cintptr_t = ffi.typeof("intptr_t")
+local function f_id(self)
+  return tonumber(ffi.cast(cintptr_t, self))
+end
+
+function cclass.new(name, namespace, def, base)
+  local ctype = ffi.typeof(name)
+  local pctype = ffi.typeof(name.."*")
+
+  -- build metatype
+
+  local index = {} -- class total index
+  local defindex = {} -- class def index (defined function or direct ffi binding)
+
+  if base then  -- inherit from base
+    local bmtable = getmetatable(base) 
+    if bmtable and bmtable.cclass then
+      local pctype = bmtable.pctype
+      -- copy base defindex
+      for k,v in pairs(bmtable.defindex) do
+        -- cast function
+        local f = function(self, ...)
+          v(ffi.cast(pctype, self), ...)
+        end
+
+        index[k] = f -- copy defs
+        index["_s_"..k] = f -- save as super
+      end
+    end
+  end
+
+  -- add def
+
+  for k,v in pairs(def) do
+    -- bind ffi call
+    local symbol = name.."_"..k
+    local ok = pcall(function() return ffi.cast("void*", namespace[symbol]) end)
+    if ok then -- ffi symbol exists
+      local f = namespace[symbol]
+      defindex[k] = f -- add to defindex
+      index[k] = f -- as direct call
+      index["_c_"..k] = f -- save local ffi binding
+    end
+
+    if type(v) == "function" then -- bind lua function
+      index[k] = v
+      defindex[k] = v  -- add to defindex
+    end
+  end
+
+  -- add special functions
+
+  index._id = f_id -- _id()
+
+  function index:_type() -- _type()
+    return name
+  end
+
+  -- setup metatype
+
+  local mtable = {
+    __index = index
+  }
+
+  ffi.metatype(ctype, mtable)
+
+  -- setup class
+  
+  local instanciate = function(c, ...)
+    local new = c._c_new
+    local delete = c._c_delete
+    if new and delete then
+      return ffi.gc(new(...), delete)
+    else
+      error("can't instanciate cclass "..name.." : missing new and/or delete functions")
+    end
+  end
+
+  return setmetatable({}, { __call = instanciate, __index = index, cclass = true, defindex = defindex, pctype = pctype })
+end
+
+-- SHORTCUTS
+setmetatable(cclass, { __call = function(t, ...) 
+  return t.new(...)
+end})
+
+Luaoop.cclass = cclass
+end
+
 return Luaoop
