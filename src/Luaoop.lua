@@ -729,10 +729,12 @@ end
 -- name: name of the class, used to define the cdata type and the functions prefix
 -- statics: static functions exposed to the class object, special functions are exposed by default
 -- methods: methods exposed to the instances, special methods are overridden
--- base: inherited cclass 
-function cclass.new(name, statics, methods, base)
+-- ...: inherited bases cclass 
+function cclass.new(name, statics, methods, ...)
   local ctype = ffi.typeof(name)
   local pctype = ffi.typeof(name.."*")
+  local bases = {...}
+
   local types = { [name] = true }
 
   -- build metatype
@@ -783,7 +785,8 @@ function cclass.new(name, statics, methods, base)
     end
   end
 
-  if base then  -- inherit from base
+  for k,base in pairs(bases) do
+    -- inherit from base
     local bmtable = getmetatable(base) 
     if bmtable and bmtable.cclass then
       -- methods
@@ -806,6 +809,7 @@ function cclass.new(name, statics, methods, base)
 
         index[k] = f -- copy defs
         index["__s_"..k] = f -- save as super
+        index["__s_"..bmtable.name.."_"..k] = f -- save as absolute super alias
       end
 
       -- types
@@ -860,7 +864,7 @@ function cclass.new(name, statics, methods, base)
     end
   end
 
-  return setmetatable({}, { __call = instanciate, __index = istatics, cclass = true, imethods = imethods, pctype = pctype, types = types })
+  return setmetatable({}, { __call = instanciate, __index = istatics, cclass = true, name = name, imethods = imethods, pctype = pctype, types = types })
 end
 
 -- SHORTCUTS
