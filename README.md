@@ -249,7 +249,7 @@ It is following the Luaoop style.
 -- create C-like FFI class
 -- name: name of the class, used to define the cdata type and the functions prefix
 -- statics: static functions exposed to the class object, new and delete are exposed by default
--- methods: methods exposed to the instances (__id, __type, __s_..., __c_... are overriden)
+-- methods: methods exposed to the instances (__id, __type, __s_..., __c_... are overridden)
 -- base: inherited cclass 
 cclass.new(name, statics, methods, base)
 -- SHORTCUT cclass(...)
@@ -262,9 +262,9 @@ cclass.new(name, statics, methods, base)
 * `statics` and `methods` contain mapped lua functions or `true` to bind the C function 
 * in case of overloading with a lua function, the C function can be retrieved using `__c_function_name`
 * in case of overloading of a base class method, it can be retrieved using  `__s_function_name` (super)
-* statics are not inherited and only availables from the class object
-* Luaoop style operators are availables (you can directly implement the operators in C)
-* the `cclass` constructor will call `new` and bind the `delete` to `ffi.gc`, so new and delete are expected to manage heap memory, having a `new/delete` is not required, any way used to obtain a valid cdata will allow to use the methods (thanks to FFI metatypes)
+* statics are not inherited and are only availables from the class object
+* Luaoop style operators are availables (allow to directly implement the operators in C)
+* the `cclass` constructor will call `new` and bind the `delete` to `ffi.gc`, so new and delete are expected to manage heap memory, but having a `new/delete` is not required, any way used to obtain a valid cdata will allow the use of the methods (thanks to FFI metatypes)
 * only single inheritance is possible
 
 Example:
