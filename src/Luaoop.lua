@@ -727,8 +727,8 @@ end
 
 -- create C-like FFI class
 -- name: name of the class, used to define the cdata type and the functions prefix
--- statics: static functions exposed to the class object, new and delete are exposed by default
--- methods: methods exposed to the instances (__id, __type, __s_..., __c_... are overridden)
+-- statics: static functions exposed to the class object, special functions are exposed by default
+-- methods: methods exposed to the instances, special methods are overridden
 -- base: inherited cclass 
 function cclass.new(name, statics, methods, base)
   local ctype = ffi.typeof(name)
@@ -741,31 +741,30 @@ function cclass.new(name, statics, methods, base)
   local imethods = {} -- class methods index (defined function or direct ffi binding)
   local istatics = {} -- class statics index (defined function or direct ffi binding)
 
-  if base then  -- inherit from base
-    local bmtable = getmetatable(base) 
-    if bmtable and bmtable.cclass then
-      -- methods
+  -- add statics def
 
-      local pctype = bmtable.pctype
-      -- copy base defindex
-      for k,v in pairs(bmtable.imethods) do
-        -- cast function
-        local f = function(self, ...)
-          v(ffi.cast(pctype, self), ...)
-        end
+  -- auto register new/delete/cast static methods
+  statics.new = statics.new or true
+  statics.delete = statics.delete or true
+  statics.cast = statics.cast or true
 
-        index[k] = f -- copy defs
-        index["__s_"..k] = f -- save as super
-      end
+  for k,v in pairs(statics) do
+    -- bind ffi call
+    local symbol = name.."_"..k
+    local ok = pcall(function() return ffi.cast("void*", C[symbol]) end)
+    if ok then -- ffi symbol exists
+      local f = C[symbol]
+      istatics[k] = f -- add to defindex
+      istatics["__c_"..k] = f -- save local ffi binding
+    end
 
-      -- types
-      for k,v in pairs(bmtable.types) do
-        types[k] = v
-      end
+
+    if type(v) ~= "boolean" then -- bind lua function
+      istatics[k] = v  -- add to defindex
     end
   end
 
-  -- add def
+  -- add methods def
 
   for k,v in pairs(methods) do
     -- bind ffi call
@@ -784,23 +783,35 @@ function cclass.new(name, statics, methods, base)
     end
   end
 
-  -- auto register new/delete static methods
-  statics.new = statics.new or true
-  statics.delete = statics.delete or true
+  if base then  -- inherit from base
+    local bmtable = getmetatable(base) 
+    if bmtable and bmtable.cclass then
+      -- methods
 
-  for k,v in pairs(statics) do
-    -- bind ffi call
-    local symbol = name.."_"..k
-    local ok = pcall(function() return ffi.cast("void*", C[symbol]) end)
-    if ok then -- ffi symbol exists
-      local f = C[symbol]
-      istatics[k] = f -- add to defindex
-      istatics["__c_"..k] = f -- save local ffi binding
-    end
+      local pctype = bmtable.pctype
+      -- copy base defindex
+      for k,v in pairs(bmtable.imethods) do
+        -- base cast function
+        local f = nil
+        local icast = istatics.cast
+        if icast then -- defined cast
+          f = function(self, ...)
+            v(icast(self), ...)
+          end
+        else -- ffi cast
+          f = function(self, ...)
+            v(ffi.cast(pctype, self), ...)
+          end
+        end
 
+        index[k] = f -- copy defs
+        index["__s_"..k] = f -- save as super
+      end
 
-    if type(v) ~= "boolean" then -- bind lua function
-      istatics[k] = v  -- add to defindex
+      -- types
+      for k,v in pairs(bmtable.types) do
+        types[k] = v
+      end
     end
   end
 

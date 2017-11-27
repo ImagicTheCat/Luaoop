@@ -248,12 +248,27 @@ It is following the Luaoop style.
 ```lua
 -- create C-like FFI class
 -- name: name of the class, used to define the cdata type and the functions prefix
--- statics: static functions exposed to the class object, new and delete are exposed by default
--- methods: methods exposed to the instances (__id, __type, __s_..., __c_... are overridden)
+-- statics: static functions exposed to the class object, special functions are exposed by default
+-- methods: methods exposed to the instances, special methods are overridden
 -- base: inherited cclass 
 cclass.new(name, statics, methods, base)
 -- SHORTCUT cclass(...)
 ```
+
+#### Special statics
+* `new`: should return a new heap instance of the cclass
+* `delete`: should free the instance pointer
+* `cast`: should return a valid casted pointer of the passed instance to the base type
+
+#### Special methods
+
+Special methods override the cclass methods, they all start by `__`.
+
+* `id`: return the instance id
+* `type`: return the type of the instance as a string
+* `instanceof(stype)`: check if the instance is based on the passed type (as string)
+* `c_...`: call the C method `...`
+* `s_...`: call the super method `...`
 
 ### Usage
 
