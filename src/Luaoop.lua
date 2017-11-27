@@ -575,6 +575,154 @@ local function f_id(self)
   return tonumber(ffi.cast(cintptr_t, self))
 end
 
+-- optimize special method name resolution
+local op_dict = {}
+
+-- get operator from instance lhs, rhs can be nil for unary operators
+local function getop(lhs, name, rhs, no_error)
+  local f = nil
+
+  local rtype = nil
+  if type(rhs) == "cdata" and rhs.__type then
+    rtype = rhs:__type()
+  else
+    rtype = type(rhs)
+  end
+
+  -- optimization using op_dict
+  local dict = op_dict[name]
+  if not dict then
+    dict = {}
+    op_dict[name] = dict
+  end
+
+  -- method name
+  local fname = dict[rtype]
+  if not fname then -- generate fname
+    if rhs then
+      fname = "__"..name.."_"..rtype
+    else
+      fname = "__"..name
+    end
+
+    dict[rtype] = fname
+  end
+
+  f = lhs[fname]
+
+  if f then
+    return f
+  elseif not no_error then
+    error("operator <"..lhs:__type().."> ["..name.."] <"..rtype.."> undefined")
+  end
+end
+
+-- proxy lua operators
+local function op_tostring(lhs)
+  local f = getop(lhs, "tostring", nil)
+  if f then return f(lhs) end
+end
+
+local function op_concat(lhs,rhs)
+  local f = getop(lhs, "concat", rhs, true)
+  if f then 
+    return f(lhs,rhs) 
+  end
+
+  f = getop(rhs, "concat", lhs)
+  if f then 
+    return f(rhs,lhs,true) 
+  end
+end
+
+local function op_unm(lhs)
+  local f = getop(lhs, "unm", nil)
+  if f then return f(lhs) end
+end
+
+local function op_call(lhs, ...)
+  local f = getop(lhs, "call", nil)
+  if f then return f(lhs, ...) end
+end
+
+local function op_add(lhs,rhs)
+  local f = getop(lhs, "add", rhs, true)
+  if f then 
+    return f(lhs,rhs) 
+  end
+
+  f = getop(rhs, "add", lhs)
+  if f then 
+    return f(rhs,lhs) 
+  end
+end
+
+local function op_sub(lhs,rhs) -- also deduced as lhs+(-rhs)
+  local f = getop(lhs, "sub", rhs, true)
+  if f then 
+    return f(lhs,rhs)
+  end
+
+  f = getop(lhs, "add", rhs)
+  if f then
+    return f(lhs, -rhs)
+  end
+end
+
+local function op_mul(lhs,rhs)
+  local f = getop(lhs, "mul", rhs, true)
+  if f then 
+    return f(lhs,rhs) 
+  end
+
+  f = getop(rhs, "mul", lhs)
+  if f then 
+    return f(rhs,lhs) 
+  end
+end
+
+local function op_div(lhs,rhs)
+  local f = getop(lhs, "div", rhs)
+  if f then 
+    return f(lhs,rhs) 
+  end
+end
+
+local function op_mod(lhs,rhs)
+  local f = getop(lhs, "mod", rhs)
+  if f then 
+    return f(lhs,rhs) 
+  end
+end
+
+local function op_pow(lhs,rhs)
+  local f = getop(lhs, "pow", rhs)
+  if f then 
+    return f(lhs,rhs) 
+  end
+end
+
+local function op_eq(lhs,rhs)
+  local f = getop(lhs, "eq", rhs, true)
+  if f then 
+    return f(lhs,rhs) 
+  end
+end
+
+local function op_lt(lhs,rhs)
+  local f = getop(lhs, "lt", rhs)
+  if f then 
+    return f(lhs,rhs) 
+  end
+end
+
+local function op_le(lhs,rhs)
+  local f = getop(lhs, "le", rhs)
+  if f then 
+    return f(lhs,rhs) 
+  end
+end
+
 function cclass.new(name, statics, methods, base)
   local ctype = ffi.typeof(name)
   local pctype = ffi.typeof(name.."*")
@@ -597,7 +745,7 @@ function cclass.new(name, statics, methods, base)
         end
 
         index[k] = f -- copy defs
-        index["_s_"..k] = f -- save as super
+        index["__s_"..k] = f -- save as super
       end
     end
   end
@@ -612,7 +760,7 @@ function cclass.new(name, statics, methods, base)
       local f = C[symbol]
       imethods[k] = f -- add to defindex
       index[k] = f -- as direct call
-      index["_c_"..k] = f -- save local ffi binding
+      index["__c_"..k] = f -- save local ffi binding
     end
 
     if type(v) ~= "boolean" then -- bind lua function
@@ -632,7 +780,7 @@ function cclass.new(name, statics, methods, base)
     if ok then -- ffi symbol exists
       local f = C[symbol]
       istatics[k] = f -- add to defindex
-      istatics["_c_"..k] = f -- save local ffi binding
+      istatics["__c_"..k] = f -- save local ffi binding
     end
 
 
@@ -643,16 +791,29 @@ function cclass.new(name, statics, methods, base)
 
   -- add special functions
 
-  index._id = f_id -- _id()
+  index.__id = f_id -- __id()
 
-  function index:_type() -- _type()
+  function index:__type() -- __type()
     return name
   end
 
   -- setup metatype
 
   local mtable = {
-    __index = index
+    __index = index,
+    __call = op_call,
+    __unm = op_unm,
+    __add = op_add,
+    __sub = op_sub,
+    __mul = op_mul,
+    __div = op_div,
+    __pow = op_pow,
+    __mod = op_mod,
+    __eq = op_eq,
+    __le = op_le,
+    __lt = op_lt,
+    __tostring = op_tostring,
+    __concat = op_concat
   }
 
   ffi.metatype(ctype, mtable)

@@ -18,13 +18,13 @@ typedef struct{} Cat;
 Cat* Cat_new();
 void Cat_scratch(Cat*);
 void Cat_delete(Cat*);
-int Cat_mult(Cat*, int, int);
+int Cat___mul_number(Cat*, int);
 ]])
 
 local libanimal = ffi.load("animal", true)
 
 local Animal = cclass("Animal", {}, { eat = true })
-local Cat = cclass("Cat", {}, { scratch = true, mult = true }, Animal)
+local Cat = cclass("Cat", {}, { scratch = true, __mul_number = true }, Animal)
 
 -- test
 
@@ -35,10 +35,10 @@ an:eat()
 cat:eat()
 cat:scratch()
 
-print("an", an:_id(), an:_type())
-print("cat", cat:_id(), cat:_type())
+print("an", an:__id(), an:__type())
+print("cat", cat:__id(), cat:__type())
 
 for i=0,1000000 do
   local tcat = Cat()
-  tcat:mult(5,5)
+  local a = tcat*5
 end

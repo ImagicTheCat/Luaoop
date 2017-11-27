@@ -18,6 +18,6 @@ void Animal_delete(Animal* self){ delete self; }
 Cat* Cat_new(){ return new Cat(); }
 void Cat_scratch(Cat* self){ self->scratch(); }
 void Cat_delete(Cat* self){ delete self; }
-int Cat_mult(Cat* self, int a, int b){ return a*b; }
+int Cat___mul_number(Cat* self, int a){ return 42*a; }
 
 }
