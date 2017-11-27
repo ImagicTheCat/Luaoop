@@ -234,3 +234,73 @@ Which let:
 * `class.propagate`
 
 See `sandbox.lua` example for usage.
+
+## CClass (LuaJIT)
+
+Luaoop also have a `cclass` module to create "C-like FFI interface class", taking advange of the FFI metatype of LuaJIT.
+
+This is a completely different module and none of the functions of `class` are related to `cclass`. 
+
+It is following the Luaoop style.
+
+### API
+
+```lua
+-- create C-like FFI class
+-- name: name of the class, used to define the cdata type and the functions prefix
+-- statics: static functions exposed to the class object, new and delete are exposed by default
+-- methods: methods exposed to the instances (__id, __type, __s_..., __c_... are overriden)
+-- base: inherited cclass 
+cclass.new(name, statics, methods, base)
+-- SHORTCUT cclass(...)
+```
+
+### Usage
+
+* the name will be used as a FFI symbol prefix
+* the symbols will be looked in `ffi.C`
+* `statics` and `methods` contain mapped lua functions or `true` to bind the C function 
+* in case of overloading with a lua function, the C function can be retrieved using `__c_function_name`
+* in case of overloading of a base class method, it can be retrieved using  `__s_function_name` (super)
+* statics are not inherited and only availables from the class object
+* Luaoop style operators are availables (you can directly implement the operators in C)
+* the `cclass` constructor will call `new` and bind the `delete` to `ffi.gc`, so new and delete are expected to manage heap memory, having a `new/delete` is not required, any way used to obtain a valid cdata will allow to use the methods (thanks to FFI metatypes)
+* only single inheritance is possible
+
+Example:
+```lua
+-- adding behaviour to a struct
+
+ffi.cdef([[
+typedef struct{
+  int x;
+  int y;
+} Vec2;
+]])
+
+-- get cdata constructor
+local ct_Vec2 = ffi.typeof("Vec2")
+
+-- define the type methods
+local Vec2 = cclass("Vec2", {}, {
+  __mul_number = function(self, rhs) 
+    local v = ct_Vec2()
+    v.x = self.x*rhs
+    v.y = self.y*rhs
+
+    return v
+  end,
+  __tostring = function(self)
+    return "("..self.x..","..self.y..")"
+  end
+})
+
+-- create Vec2 instance using the ctype
+
+local vec = ct_Vec2()
+vec.x = 1
+vec.y = 2
+print(vec*10) -- "(10,20)"
+```
+
+See the `cclass` example directory to understand more the design and to interface with C++.

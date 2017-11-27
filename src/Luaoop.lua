@@ -575,6 +575,8 @@ local function f_id(self)
   return tonumber(ffi.cast(cintptr_t, self))
 end
 
+-- NOTE: operator redundant code until better way
+
 -- optimize special method name resolution
 local op_dict = {}
 
@@ -723,6 +725,11 @@ local function op_le(lhs,rhs)
   end
 end
 
+-- create C-like FFI class
+-- name: name of the class, used to define the cdata type and the functions prefix
+-- statics: static functions exposed to the class object, new and delete are exposed by default
+-- methods: methods exposed to the instances (__id, __type, __s_..., __c_... are overriden)
+-- base: inherited cclass 
 function cclass.new(name, statics, methods, base)
   local ctype = ffi.typeof(name)
   local pctype = ffi.typeof(name.."*")
