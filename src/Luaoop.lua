@@ -585,10 +585,17 @@ local function getop(lhs, name, rhs, no_error)
   local f = nil
 
   local rtype = nil
-  if type(rhs) == "cdata" and rhs.__type then
+  if type(rhs) == "cdata" then
     rtype = rhs:__type()
   else
     rtype = type(rhs)
+  end
+
+  local ltype = nil
+  if type(lhs) == "cdata" then
+    ltype = lhs:__type()
+  else
+    ltype = type(lhs)
   end
 
   -- optimization using op_dict
@@ -610,12 +617,14 @@ local function getop(lhs, name, rhs, no_error)
     dict[rtype] = fname
   end
 
-  f = lhs[fname]
+  if ltype == "cdata" then
+    f = lhs:__get(fname)
+  end
 
   if f then
     return f
   elseif not no_error then
-    error("operator <"..lhs:__type().."> ["..name.."] <"..rtype.."> undefined")
+    error("operator <"..ltype.."> ["..name.."] <"..rtype.."> undefined")
   end
 end
 
@@ -829,6 +838,10 @@ function cclass.new(name, statics, methods, ...)
 
   function index:__instanceof(stype) -- __instanceof()
     return types[stype] ~= nil
+  end
+
+  function index:__get(member) -- __get()
+    return index[member]
   end
 
   -- setup metatype

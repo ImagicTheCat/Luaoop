@@ -270,6 +270,7 @@ Special methods override the cclass methods, they all start by `__`.
 * `c_...`: call the C method `...`
 * `s_...`: call the super method `...`
 * `s_Base_...`: call the super method `...` for a specific base class
+* `get(member)`: get the member function of the given name (cdata throw an error when a nil member is accessed)
 
 ### Usage
 
