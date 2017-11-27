@@ -728,11 +728,12 @@ end
 -- create C-like FFI class
 -- name: name of the class, used to define the cdata type and the functions prefix
 -- statics: static functions exposed to the class object, new and delete are exposed by default
--- methods: methods exposed to the instances (__id, __type, __s_..., __c_... are overriden)
+-- methods: methods exposed to the instances (__id, __type, __s_..., __c_... are overridden)
 -- base: inherited cclass 
 function cclass.new(name, statics, methods, base)
   local ctype = ffi.typeof(name)
   local pctype = ffi.typeof(name.."*")
+  local types = { [name] = true }
 
   -- build metatype
 
@@ -743,6 +744,8 @@ function cclass.new(name, statics, methods, base)
   if base then  -- inherit from base
     local bmtable = getmetatable(base) 
     if bmtable and bmtable.cclass then
+      -- methods
+
       local pctype = bmtable.pctype
       -- copy base defindex
       for k,v in pairs(bmtable.imethods) do
@@ -753,6 +756,11 @@ function cclass.new(name, statics, methods, base)
 
         index[k] = f -- copy defs
         index["__s_"..k] = f -- save as super
+      end
+
+      -- types
+      for k,v in pairs(bmtable.types) do
+        types[k] = v
       end
     end
   end
@@ -796,12 +804,16 @@ function cclass.new(name, statics, methods, base)
     end
   end
 
-  -- add special functions
+  -- add special methods
 
   index.__id = f_id -- __id()
 
   function index:__type() -- __type()
     return name
+  end
+
+  function index:__instanceof(stype) -- __instanceof()
+    return types[stype] ~= nil
   end
 
   -- setup metatype
@@ -837,7 +849,7 @@ function cclass.new(name, statics, methods, base)
     end
   end
 
-  return setmetatable({}, { __call = instanciate, __index = istatics, cclass = true, imethods = imethods, pctype = pctype })
+  return setmetatable({}, { __call = instanciate, __index = istatics, cclass = true, imethods = imethods, pctype = pctype, types = types })
 end
 
 -- SHORTCUTS
