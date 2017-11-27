@@ -281,7 +281,7 @@ Special methods override the cclass methods, they all start by `__`.
 * Luaoop style operators are availables (allow to directly implement the operators in C)
 * the `cclass` constructor will call `new` and bind the `delete` to `ffi.gc`, so new and delete are expected to manage heap memory, but having a `new/delete` is not required, any way used to obtain a valid cdata will allow the use of the methods (thanks to FFI metatypes)
 * only single inheritance is possible
-* remember that LuaJIT can't know how C++ cast multiple inherited pointer types so using them will results in undefined behavior, `cclass` based on C++ inherited interface (with multiple inheritances) should overload the inherited methods with a C++ cast to the base class.
+* remember that LuaJIT can't know how C++ cast multiple inherited pointer types so using them will result in undefined behavior, `cclass` based on C++ inherited interface (with multiple inheritances) should define the static `cast` function to generate a valid pointer casted to the base class type (it's also possible to overload the base methods in C and cast the pointer here, giving more control but losing the interest of having `cclass` inheritance)
 
 Example:
 ```lua
