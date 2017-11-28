@@ -617,7 +617,7 @@ local function getop(lhs, name, rhs, no_error)
     dict[rtype] = fname
   end
 
-  if ltype == "cdata" then
+  if type(lhs) == "cdata" then
     f = lhs:__get(fname)
   end
 
@@ -808,11 +808,11 @@ function cclass.new(name, statics, methods, ...)
         local icast = istatics.cast
         if icast then -- defined cast
           f = function(self, ...)
-            v(icast(self), ...)
+            return v(icast(self), ...)
           end
         else -- ffi cast
           f = function(self, ...)
-            v(ffi.cast(pctype, self), ...)
+            return v(ffi.cast(pctype, self), ...)
           end
         end
 
