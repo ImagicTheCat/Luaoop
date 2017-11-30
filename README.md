@@ -246,6 +246,9 @@ It is following the Luaoop style.
 ### API
 
 ```lua
+-- change the symbols dict for the following created cclass (ffi.C by default)
+cclass.symbols(symbols)
+
 -- create C-like FFI class
 -- name: name of the class, used to define the cdata type and the functions prefix
 -- statics: static functions exposed to the class object, special functions are exposed by default
