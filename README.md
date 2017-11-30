@@ -284,7 +284,6 @@ Special methods override the cclass methods, they all start by `__`.
 ### Usage
 
 * the name will be used as a FFI symbol prefix
-* the symbols will be looked in `ffi.C`
 * `statics` and `methods` contain mapped lua functions or `true` to bind the C function 
 * in case of overloading with a lua function, the C function can be retrieved using `__c_function_name`
 * in case of overloading of a base class method, it can be retrieved using  `__s_function_name` or in a more specific way `__s_Base_function_name` (super)
