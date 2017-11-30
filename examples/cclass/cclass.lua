@@ -38,7 +38,8 @@ cat:scratch()
 print("an", an:__id(), an:__type())
 print("cat", cat:__id(), cat:__type())
 
-print(cat:__instanceof("Cat"), cat:__instanceof("Animal"), cat:__instanceof("Object"))
+print(cat:__instanceof("Cat"), cat:__instanceof(Cat.name()), cat:__instanceof("Animal"), cat:__instanceof("Object"))
+print(cat:__cast("Animal"):eat())
 
 for i=0,1000000 do
   local tcat = Cat()

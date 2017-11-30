@@ -258,10 +258,15 @@ cclass.new(name, statics, methods, ...)
 -- SHORTCUT cclass(...)
 ```
 
-#### Special statics
+#### Used statics
+
 * `new`: should return a new heap instance of the cclass
 * `delete`: should free the instance pointer
-* `cast`: should return a valid casted pointer of the passed instance to the base type
+* `cast_Base`: should return a valid casted pointer of the passed instance to the base type
+
+#### Special statics
+
+* `name`: return the class name
 
 #### Special methods
 
@@ -270,6 +275,7 @@ Special methods override the cclass methods, they all start by `__`.
 * `id`: return the instance id
 * `type`: return the type of the instance as a string
 * `instanceof(stype)`: check if the instance is based on the passed type (as string)
+* `cast(stype)`: return up-casted version of the instance in the passed type (as string)
 * `c_...`: call the C method `...`
 * `s_...`: call the super method `...`
 * `s_Base_...`: call the super method `...` for a specific base class
@@ -285,7 +291,8 @@ Special methods override the cclass methods, they all start by `__`.
 * statics are not inherited and are only availables from the class object
 * Luaoop style operators are availables (allow to directly implement the operators in C)
 * the `cclass` constructor will call `new` and bind the `delete` to `ffi.gc`, so new and delete are expected to manage heap memory, but having a `new/delete` is not required, any way used to obtain a valid cdata will allow the use of the methods (thanks to FFI metatypes)
-* multiple inheritances is possible, but remember that LuaJIT can't know how C++ cast multiple inherited pointer types so using them will result in undefined behavior, `cclass` based on C++ inherited interface (with multiple inheritances) should define the static `cast` function to generate a valid pointer casted to the base class type (it's also possible to overload the base methods in C and cast the pointer here, giving more control but losing the interest of having `cclass` inheritance)
+* multiple inheritances is possible, but remember that LuaJIT can't know how C++ cast multiple inherited pointer types so using them will result in undefined behavior, `cclass` based on C++ inherited interface (with multiple inheritances) should define the static `cast_Base` function to generate a valid pointer casted to the base class type (it's also possible to overload the base methods in C and cast the pointer here, giving more control but losing the interest of having `cclass` inheritance)
+* only up-cast is available, casting an instance back to a child class is not allowed (it's possible using ffi.cast, but this can result in undefined behavior, like a `A*` -> `void*` -> `B*`)
 
 Example:
 ```lua

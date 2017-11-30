@@ -750,6 +750,8 @@ function cclass.new(name, statics, methods, ...)
   local bases = {...}
 
   local types = { [name] = true }
+  -- cast functions for each base (and parent bases) type
+  local casts = { [name] = function(cdata) return cdata end } -- identity cast
 
   -- build metatype
 
@@ -780,36 +782,48 @@ function cclass.new(name, statics, methods, ...)
     end
   end
 
+  -- add special statics
+  istatics.name = function() return name end
+
   -- add methods def
 
   for k,base in pairs(bases) do
     -- inherit from base
     local bmtable = getmetatable(base) 
     if bmtable and bmtable.cclass then
+      -- generate base cast function
+      local pctype = bmtable.pctype
+      local bname = bmtable.name
+      local bcast = istatics["cast_"..bname] -- get defined cast
+      if not bcast then -- generate ffi cast
+        bcast = function(cdata) return ffi.cast(pctype, cdata) end
+      end
+
+      -- add proxied base casts
+      for k,v in pairs(bmtable.casts) do
+        casts[k] = function(cdata)
+          return v(bcast(cdata))
+        end
+      end
+ 
+      casts[bname] = bcast
+
       -- methods
 
-      local pctype = bmtable.pctype
       -- copy base defindex
       for k,v in pairs(bmtable.imethods) do
-        -- base cast function
-        local f = nil
-        local icast = istatics.cast
-        if icast then -- defined cast
-          f = function(self, ...)
-            return v(icast(self), ...)
-          end
-        else -- ffi cast
-          f = function(self, ...)
-            return v(ffi.cast(pctype, self), ...)
-          end
+        -- casted function proxy
+        local f = function(self, ...)
+          return v(bcast(self), ...)
         end
 
+        imethods[k] = f
         index[k] = f -- copy defs
         index["__s_"..k] = f -- save as super
         index["__s_"..bmtable.name.."_"..k] = f -- save as absolute super alias
       end
 
-      -- types
+      -- add base types
       for k,v in pairs(bmtable.types) do
         types[k] = v
       end
@@ -845,6 +859,15 @@ function cclass.new(name, statics, methods, ...)
 
   function index:__instanceof(stype) -- __instanceof()
     return types[stype] ~= nil
+  end
+
+  function index:__cast(stype) -- __cast()
+    local f = casts[stype]
+    if f then
+      return f(self)
+    else
+      error("can't up-cast "..self:__type().." to "..stype)
+    end
   end
 
   function index:__get(member) -- __get()
@@ -884,7 +907,7 @@ function cclass.new(name, statics, methods, ...)
     end
   end
 
-  return setmetatable({}, { __call = instanciate, __index = istatics, cclass = true, name = name, imethods = imethods, pctype = pctype, types = types })
+  return setmetatable({}, { __call = instanciate, __index = istatics, __new_index = function() end, cclass = true, name = name, imethods = imethods, pctype = pctype, casts = casts, types = types })
 end
 
 -- SHORTCUTS
