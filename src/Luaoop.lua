@@ -570,6 +570,11 @@ local ffi = require("ffi")
 local C = ffi.C
 local cclass = {}
 
+-- change the symbols dict for the next following cclass (ffi.C by default)
+function cclass.symbols(symbols)
+  C = symbols
+end
+
 local cintptr_t = ffi.typeof("intptr_t")
 local function f_id(self)
   return tonumber(ffi.cast(cintptr_t, self))
