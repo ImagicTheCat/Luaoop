@@ -777,23 +777,6 @@ function cclass.new(name, statics, methods, ...)
 
   -- add methods def
 
-  for k,v in pairs(methods) do
-    -- bind ffi call
-    local symbol = name.."_"..k
-    local ok = pcall(function() return ffi.cast("void*", C[symbol]) end)
-    if ok then -- ffi symbol exists
-      local f = C[symbol]
-      imethods[k] = f -- add to defindex
-      index[k] = f -- as direct call
-      index["__c_"..k] = f -- save local ffi binding
-    end
-
-    if type(v) ~= "boolean" then -- bind lua function
-      index[k] = v
-      imethods[k] = v  -- add to defindex
-    end
-  end
-
   for k,base in pairs(bases) do
     -- inherit from base
     local bmtable = getmetatable(base) 
@@ -827,6 +810,25 @@ function cclass.new(name, statics, methods, ...)
       end
     end
   end
+
+  for k,v in pairs(methods) do
+    -- bind ffi call
+    local symbol = name.."_"..k
+    local ok = pcall(function() return ffi.cast("void*", C[symbol]) end)
+    if ok then -- ffi symbol exists
+      local f = C[symbol]
+      imethods[k] = f -- add to defindex
+      index[k] = f -- as direct call
+      index["__c_"..k] = f -- save local ffi binding
+    end
+
+    if type(v) ~= "boolean" then -- bind lua function
+      index[k] = v
+      imethods[k] = v  -- add to defindex
+    end
+  end
+
+
 
   -- add special methods
 
