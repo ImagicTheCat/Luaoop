@@ -761,10 +761,16 @@ function cclass.new(name, statics, methods, ...)
 
   -- add statics def
 
-  -- auto register new/delete/cast static methods
+  -- auto register new/delete/casts static methods
   statics.new = statics.new or true
   statics.delete = statics.delete or true
-  statics.cast = statics.cast or true
+  for k,base in pairs(bases) do
+    local bmtable = getmetatable(base)
+    if bmtable and bmtable.cclass then
+      local index = "cast_"..bmtable.name
+      statics[index] = statics[index] or true
+    end
+  end
 
   for k,v in pairs(statics) do
     -- bind ffi call
@@ -775,7 +781,6 @@ function cclass.new(name, statics, methods, ...)
       istatics[k] = f -- add to defindex
       istatics["__c_"..k] = f -- save local ffi binding
     end
-
 
     if type(v) ~= "boolean" then -- bind lua function
       istatics[k] = v  -- add to defindex
