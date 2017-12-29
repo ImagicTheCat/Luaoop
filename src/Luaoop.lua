@@ -879,6 +879,31 @@ function cclass.new(name, statics, methods, ...)
     return index[member]
   end
 
+  -- __data() (return data table per type&instance)
+  local data_tables = setmetatable({}, { __mode = "v" })
+  local data_refs = setmetatable({}, { __mode = "k" })
+  function index:__data()
+    -- find ref to data table for this cdata
+    local ref = data_refs[self]
+    if not ref then
+      local id = self:__id()
+      -- get data table for this id/address
+      local dt = data_tables[id]
+      if not dt then
+        -- create the data table
+        dt = {}
+        data_tables[id] = dt
+      end
+
+      -- set reference
+      ref = dt
+      data_refs[self] = ref
+    end
+
+    -- return data table
+    return ref
+  end
+
   -- setup metatype
 
   local mtable = {

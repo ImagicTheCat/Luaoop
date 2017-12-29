@@ -272,7 +272,7 @@ cclass.new(name, statics, methods, ...)
 
 Special methods override the cclass methods, they all start by `__`.
 
-* `id`: return the instance id
+* `id`: return the instance id (intptr address)
 * `type`: return the type of the instance as a string
 * `instanceof(stype)`: check if the instance is based on the passed type (as string)
 * `cast(stype)`: return up-casted version of the instance in the passed type (as string)
@@ -280,6 +280,7 @@ Special methods override the cclass methods, they all start by `__`.
 * `s_...`: call the super method `...`
 * `s_Base_...`: call the super method `...` for a specific base class
 * `get(member)`: get the member function of the given name (cdata throw an error when a nil member is accessed)
+* `data`: return the datatable associated to this instance (per type, a cast from this instance will give a different datatable)
 
 ### Usage
 
