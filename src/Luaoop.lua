@@ -570,8 +570,6 @@ local ffi = require("ffi")
 local C = ffi.C
 local cclass = {}
 
-local data_tables = setmetatable({}, { __mode = "v" })
-
 -- change the symbols dict for the next following cclass (ffi.C by default)
 function cclass.symbols(symbols)
   C = symbols
@@ -882,6 +880,7 @@ function cclass.new(name, statics, methods, ...)
   end
 
   -- __data() (return data table per type&instance)
+  local data_tables = setmetatable({}, { __mode = "v" })
   local data_refs = setmetatable({}, { __mode = "k" })
   function index:__data()
     -- find ref to data table for this cdata
@@ -901,14 +900,8 @@ function cclass.new(name, statics, methods, ...)
       data_refs[self] = ref
     end
 
-    -- return sub data table (per type)
-    local stype = self:__type()
-    local dtable = ref[stype]
-    if not dtable then
-      dtable = {}
-      ref[stype] = dtable
-    end
-    return dtable
+    -- return data table
+    return ref
   end
 
   -- setup metatype
