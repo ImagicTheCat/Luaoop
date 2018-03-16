@@ -96,6 +96,12 @@ print(class.type(bottle))
 print(class.type(Bottle))
 print(class.type(Object))
 
+local types = class.types(bottle)
+
+for k,v in pairs(types) do
+  print("bottle has type "..k)
+end
+
 print(bottle*2)
 print(2*bottle)
 

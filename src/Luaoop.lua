@@ -82,28 +82,32 @@ function class.new(name, ...)
     -- replace safe access
     for k,v in pairs(bases) do
       local c, mt = class.unsafe(v)
-      if c and mt.class then -- is safe access with class functionalities
+      if c and mt.fclass then -- is safe access with class functionalities
         bases[k] = c 
       end
     end
 
-    -- check inheritance validity and generate safe access
+    local types = { [name] = true } -- add self type
+
+    -- check inheritance validity and build types map
     for k,v in pairs(bases) do
       local mtable = getmetatable(v)
 
       if not mtable or (not mtable.classname and not mtable.bases) then -- if not a class
         error("invalid class definition "..name)
       end
+
+      -- add types
+      for t,_ in pairs(mtable.types) do
+        types[t] = true
+      end
     end
 
     if #bases > 1 then -- multiple inheritance, proxy
-      setmetatable(c,{ __index = class_index, bases = bases })
+      setmetatable(c,{ __index = class_index, bases = bases, types = types })
       return class.new(name, c) -- then single inheritance of the proxy
     else -- single inheritance
-      setmetatable(c, { __index = class_index, bases = bases, class = true, classname = name, __call = class.instanciate, __pow = class_pow_instance})
-
-      -- add class methods access in classname namespace -> instance.Class.method(instance, ...)
-      c[name] = class.safeaccess(c)
+      setmetatable(c, { __index = class_index, bases = bases, types = types, class = true, classname = name, __call = class.instanciate, __pow = class_pow_instance})
 
       if not classes[name] then
         classes[name] = c -- reference class
@@ -156,7 +160,7 @@ function class.safeaccess(t, fclass)
       -- flags
       if fclass then 
         mt.__call = mtable.__call 
-        mt.class = true
+        mt.fclass = true -- flag with class functionalities
       end
 
       return setmetatable(_t, mt)
@@ -177,33 +181,15 @@ end
 
 -- return classname or nil if not a class or instance of class
 function class.name(t)
-  local cname = nil
-
   local c, mt = class.unsafe(t)
-  if c and mt.class then t = c end -- is safe access with class functionalities, replace with class
+  if c then t = c end -- is safe access, replace with class
 
   if t ~= nil then
     local mtable = getmetatable(t)
     if mtable ~= nil then
-      -- optimization
-      if mtable.classname ~= nil then return mtable.classname end
-
-      -- first unoptimized call
-      local class = mtable.__index
-      if class ~= nil then
-        local submtable = getmetatable(class)
-        if submtable ~= nil then
-          local name = submtable.classname 
-          if name ~= nil then cname = name end
-        end
-      end
-
-      -- set optimization
-      mtable.classname = cname
+      return mtable.classname
     end
   end
-
-  return cname
 end
 
 -- return the defined classname or the lua type for an instance or class
@@ -216,44 +202,42 @@ function class.type(t)
   return name
 end
 
--- used by instanceof
-local function fill_classlist(classlist, mtable)
-  while mtable ~= nil do
-    if mtable.classname ~= nil then
-      classlist[mtable.classname] = true
-    end
+-- check if an instance/class is/inherits from a specific classname
+function class.is(t, name)
+  local c, mt = class.unsafe(t)
+  if c then t = c end -- is safe access, replace with class
 
-    mtable = getmetatable(mtable.__index)
-    if mtable ~= nil and mtable.bases ~= nil then
-      for k,v in pairs(mtable.bases) do -- recursively explore multiple heritances
-        fill_classlist(classlist,getmetatable(v))
-      end
-    end
-  end
-end
-
--- check if the instance is derivated from a specific classname
-function class.instanceof(o, name)
-  if o ~= nil then
-    local mtable = getmetatable(o)
+  if t ~= nil then
+    local mtable = getmetatable(t)
     if mtable ~= nil then
-      -- optimization
-      local classlist = mtable.classlist
-      if classlist ~= nil then return classlist[name] ~= nil end
-
-      -- first unoptimized call, build list
-      classlist = {}
-      mtable.classlist = classlist
-
-      -- add all class names to the list
-      fill_classlist(classlist,mtable)
-
-      -- check from list
-      return classlist[name] ~= nil
+      local types = mtable.types
+      if types ~= nil then return types[name] ~= nil end
     end
   end
 
   return false
+end
+
+-- alias for inherits
+class.instanceof = class.is
+
+-- return instance/class types map (type => true)
+function class.types(t)
+  local c, mt = class.unsafe(t)
+  if c then t = c end -- is safe access, replace with class
+
+  if t ~= nil then
+    local mtable = getmetatable(t)
+    if mtable ~= nil and mtable.types ~= nil then
+      -- return a copy of the types map
+      local types = {}
+      for k,v in pairs(mtable.types) do
+        types[k] = v
+      end
+
+      return types
+    end
+  end
 end
 
 -- optimize special method name resolution
@@ -437,6 +421,7 @@ function class.meta(_class)
           __index = index, 
           instance = true,
           classname = cmtable.classname,
+          types = cmtable.types,
 
           -- add operators metamethods
           __call = op_call,
@@ -465,7 +450,7 @@ end
 -- create object with a specific class and constructor arguments 
 function class.instanciate(_class, ...)
   local c, mt = class.unsafe(_class)
-  if c and mt.class then _class = c end -- is safe access with class functionalities, replace with class
+  if c and mt.fclass then _class = c end -- is safe access with class functionalities, replace with class
 
   local mtable = class.meta(_class) -- get class meta
 
