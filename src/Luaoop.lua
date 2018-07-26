@@ -284,8 +284,12 @@ local getop = class.getop
 
 -- proxy lua operators
 local function op_tostring(lhs)
-  local f = getop(lhs, "tostring", nil)
-  if f then return f(lhs) end
+  local f = getop(lhs, "tostring", nil, true)
+  if f then
+    return f(lhs)
+  else
+    return "class<"..class.name(lhs)..">: "..class.instanceid(lhs)
+  end
 end
 
 local function op_concat(lhs,rhs)
@@ -620,8 +624,12 @@ end
 
 -- proxy lua operators
 local function op_tostring(lhs)
-  local f = getop(lhs, "tostring", nil)
-  if f then return f(lhs) end
+  local f = getop(lhs, "tostring", nil, true)
+  if f then
+    return f(lhs)
+  else
+    return "cclass<"..lhs:__type()..">: "..lhs:__id()
+  end
 end
 
 local function op_concat(lhs,rhs)
