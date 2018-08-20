@@ -91,7 +91,7 @@ Class inheritance is resolved dynamically, it means that the access to a Class f
 
 Instead, instance functions are cached for each instance type when accessed the first time, this means that modifications of parent methods will require a `class.propagate` for any instantiated type that should be affected by the changes. `class.propagate` is not about Class functions propagation, but instantiated type functions propagation, it will trigger an error when used for uninstantiated types.
 
-*NOTE: when accessing a non-existent instance method, the property is cached as `false` for optimization.*
+*NOTE: When accessing a nil property, it will search in the entire class tree. For undefined checked properties like callbacks, initialize the property to false to prevent the overhead.*
 
 ```lua
 A = class("A")
