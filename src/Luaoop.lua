@@ -37,7 +37,7 @@ end
 -- create a new class
 -- name: identifier for debugging purpose
 -- ...: base classes (single/multiple inheritance)
--- return class
+-- return created class
 function class.new(name, ...)
   if type(name) == "string" then
     local c = { -- init class
@@ -82,7 +82,8 @@ function class.new(name, ...)
   end
 end
 
--- return class name or nil if not a class or instance
+-- t: class or instance
+-- return class name or nil
 function class.name(t)
   if t then
     local mtable = getmetatable(t)
@@ -95,7 +96,8 @@ function class.name(t)
   end
 end
 
--- return the class of the instance (or nil if not an instance)
+-- t: instance
+-- return the type (class) or nil
 function class.type(t)
   if t then
     local mtable = getmetatable(t)
@@ -109,7 +111,8 @@ function class.type(t)
 end
 
 -- check if an instance/class is/inherits from a specific class
--- classdef: can be nil to check if t is a built class
+-- t: class or instance
+-- classdef: can be nil to check if t is a valid (built) class
 function class.is(t, classdef)
   if t then
     local mtable = getmetatable(t)
@@ -128,7 +131,8 @@ function class.is(t, classdef)
   return false
 end
 
--- return instance/class types map (type => true) or nil if not a class or instance
+-- t: class or instance
+-- return types map (type => true) or nil
 function class.types(t)
   if t then
     local mtable = getmetatable(t)
@@ -146,11 +150,11 @@ function class.types(t)
   end
 end
 
--- get operator from instance
--- lhs: valid instance
+-- get operator
+-- lhs: instance
 -- name: full name of the operator (starting with "__")
 -- rhs: any value, can be nil for unary operators
--- no_error: if passed/true, will not display error if the operator is not found
+-- no_error: if passed/true, will not trigger an error if no operator was found
 function class.getop(lhs, name, rhs, no_error)
   local mtable = getmetatable(lhs)
   local luaoop
@@ -302,7 +306,8 @@ end
 -- get the class metatable applied to the instances
 -- useful to apply class behaviour to a custom table
 -- will build the class if not already built
--- return nil if not a class
+-- classdef: class
+-- return meta or nil
 function class.meta(classdef)
   if classdef then
     local mtable = getmetatable(classdef)
@@ -319,7 +324,9 @@ function class.meta(classdef)
   end
 end
 
--- create instance with from a specific class followed by constructor arguments 
+-- create instance
+-- classdef: class
+-- ...: constructor arguments
 function class.instantiate(classdef, ...)
   local meta = class.meta(classdef)
 
@@ -353,7 +360,9 @@ function class.instantiate(classdef, ...)
 end
 
 -- build class
--- if a class is not already built, when used for inheritance or instantiation this function will be called
+-- will build/re-build the class
+-- (if a class is not already built, when used for inheritance or instantiation this function is called)
+-- classdef: class
 function class.build(classdef)
   if classdef then
     local mtable = getmetatable(classdef)
@@ -467,8 +476,9 @@ end
 
 local addr_counter = 0 -- addr counter in replacement of table_addr
 
--- return unique instance id (or nil if not an instance)
 -- works by using tostring(table) address hack or using a counter instead on failure
+-- t: instance
+-- return unique instance id or nil
 function class.id(t)
   if t then
     local mtable = getmetatable(t)
@@ -498,7 +508,8 @@ function class.id(t)
   end
 end
 
--- return unique instance data table (or nil if not an instance)
+-- t: instance
+-- return unique instance data table or nil
 function class.data(t)
   if t then
     local mtable = getmetatable(t)

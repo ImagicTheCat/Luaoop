@@ -1,0 +1,287 @@
+= Luaoop
+
+Luaoop is a library to do OOP which aims to be simple, powerful and optimized (for LuaJIT).
+
+Look at the examples for more understanding of the library.
+
+== Install
+
+Instead of adding the file manually, luarocks can be used:
+
+`luarocks install https://raw.githubusercontent.com/ImagicTheCat/Luaoop/master/rockspecs/luaoop-scm-1.rockspec`
+
+See link:rockspecs[].
+
+NOTE: It is designed to work with LuaJIT (Lua 5.1), but the code should work on latest versions.
+
+== API
+
+[source,lua]
+----
+-- create a new class
+-- name: identifier for debugging purpose
+-- ...: base classes (single/multiple inheritance)
+-- return created class
+class.new(name, ...)
+-- SHORTCUT class(name, ...)
+
+-- t: class or instance
+-- return class name or nil
+class.name(t)
+
+-- t: instance
+-- return the type (class) or nil
+class.type(t)
+
+-- check if an instance/class is/inherits from a specific class
+-- t: class or instance
+-- classdef: can be nil to check if t is a valid (built) class
+class.is(t, classdef)
+
+-- return instance/class types map (type => true)
+-- t: class or instance
+-- return types map (type => true) or nil
+class.types(t)
+
+-- works by using tostring(table) address hack or using a counter instead on failure
+-- t: instance
+-- return unique instance id or nil
+class.id(t)
+
+-- t: instance
+-- return unique instance data table or nil
+class.data(t)
+
+-- get the class metatable applied to the instances
+-- useful to apply class behaviour to a custom table
+-- will build the class if not already built
+-- classdef: class
+-- return meta or nil
+class.meta(classdef)
+
+-- create instance
+-- classdef: class
+-- ...: constructor arguments
+class.instantiate(classdef, ...)
+-- SHORTCUT Class(...)
+
+-- build class
+-- will build/re-build the class
+-- (if a class is not already built, when used for inheritance or instantiation this function is called)
+-- classdef: class
+class.build(classdef)
+
+-- get operator
+-- lhs: instance
+-- name: full name of the operator (starting with "__")
+-- rhs: any value, can be nil for unary operators
+-- no_error: if passed/true, will not trigger an error if no operator was found
+class.getop(lhs, name, rhs, no_error)
+----
+
+== Inheritance
+
+* single and multiple inheritance
+* all properties are inherited for classes
+* all properties except special tables (starting with `__`) are inherited for instances
+
+WARNING: In case of multiple inheritance with functions with the same name, one will be taken arbitrarily. This issue can be solved by accessing directly to a specific parent method/function using the class definition.
+
+Inheritance is not dynamic (cached) and is built by `class.build`. `class.build` must be called for any later changes to the class definition or base classes (in order, build the dependencies, then build the class, then build the derived classes).
+
+NOTE: The function is already called when using a class for inheritance or instantiation for the first time, in most cases calling this function is not needed because the class is completely defined when used. 
+
+
+.Multiple inheritance
+====
+[source,lua]
+----
+A = class("A")
+function A:test()
+  print("a")
+end
+
+B = class("B")
+function B:test()
+  print("b")
+end
+
+C = class("C", A, B) -- inheritance from A and B
+function C:test() -- force the usage of B:test()
+  B.test(self)
+end
+----
+====
+
+.Overload
+====
+[source,lua]
+----
+A = class("A")
+
+function A:__construct()
+  print("a")
+end
+
+B = class("B", A)
+function B:__construct()
+  A.__construct(self) -- call parent (A) constructor
+  print("b")
+end
+----
+====
+
+== Special methods
+
+Special methods for a class can be defined, they will be overridden the same way other properties are.
+Every special method start with `__` (they are not metamethods, they are named like this to keep consistency with the Lua notation).
+
+=== Misc
+
+[horizontal]
+construct:: called at initialization
+destruct:: called at garbage collection
+
+=== Operators (or things similar)
+
+Operators can be defined like this:
+[source,lua]
+----
+function Object:__op() end -- unary
+Object.__op[rhs] = function(self, rhs) end -- binary
+----
+
+NOTE: `rhs` can be a class or a Lua type (as string).
+
+.Unary
+[horizontal]
+call:: like the metamethod
+tostring:: like the metamethod
+unm:: like the metamethod
+
+.Binary
+[horizontal]
+concat:: like the metamethod (no order, but has a second parameter "inverse" when the concat is not forward)
+add:: like the metamethod (no order)
+sub:: like the metamethod (can be omitted if `add` is defined and `unm` is defined for rhs)
+mul:: like the metamethod (no order)
+div:: like the metamethod
+mod:: like the metamethod 
+pow:: like the metamethod
+eq:: like the metamethod (doesn't throw an error if the operator is missing, will be false by default)
+le:: like the metamethod
+lt:: like the metamethod
+
+CAUTION: Comparison of different instances with different types is possible, but this may change in the future.
+
+== Private / Protected
+
+There are no private/protected mechanisms in Luaoop.
+
+"Private" methods can be achieved with local functions in the class definition.
+
+"Private" instance properties can be achieved using `class.data`, it can be used to keep some data away from the instance user.
+
+== CClass (LuaJIT)
+
+Luaoop also have a `cclass` module to create "C-like FFI interface class", taking advange of the FFI metatype of LuaJIT.
+
+This is a completely different module and none of the functions of `class` are related to `cclass`. 
+
+It is following the Luaoop style.
+
+=== API
+
+[source,lua]
+----
+-- change the symbols dict for the following created cclass (ffi.C by default)
+cclass.symbols(symbols)
+
+-- create C-like FFI class
+-- name: name of the class, used to define the cdata type and the functions prefix
+-- statics: static functions exposed to the class object, special functions are exposed by default
+-- methods: methods exposed to the instances, special methods are overridden
+-- ...: inherited bases cclass 
+cclass.new(name, statics, methods, ...)
+-- SHORTCUT cclass(...)
+----
+
+==== Used statics
+
+[horizontal]
+new:: should return a new heap instance of the cclass
+delete:: should free the instance pointer
+cast_Base:: should return a valid casted pointer of the passed instance to the base type
+
+==== Special statics
+
+[horizontal]
+name:: return the class name
+
+==== Special methods
+
+Special methods override the cclass methods, they all start by `__`.
+
+[horizontal]
+id:: return the instance id (intptr address)
+type:: return the type of the instance as a string
+instanceof(stype):: check if the instance is based on the passed type (as string)
+cast(stype):: return up-casted version of the instance in the passed type (as string)
+c_...:: call the C method `...`
+s_...:: call the super method `...`
+s_Base_...:: call the super method `...` for a specific base class
+get(member):: get the member function of the given name (cdata throw an error when a nil member is accessed)
+data:: return the datatable associated to this instance (per type, a cast from this instance will give a different datatable)
+
+=== Usage
+
+* the name will be used as a FFI symbol prefix
+* `statics` and `methods` contain mapped lua functions or `true` to bind the C function 
+* in case of overloading with a lua function, the C function can be retrieved using `__c_function_name`
+* in case of overloading of a base class method, it can be retrieved using  `__s_function_name` or in a more specific way `__s_Base_function_name` (super)
+* statics are not inherited and are only availables from the class object
+* Luaoop style operators are availables (allow to directly implement the operators in C)
+* the `cclass` constructor will call `new` and bind the `delete` to `ffi.gc`, so new and delete are expected to manage heap memory, but having a `new/delete` is not required, any way used to obtain a valid cdata will allow the use of the methods (thanks to FFI metatypes)
+* multiple inheritances is possible, but remember that LuaJIT can't know how C++ cast multiple inherited pointer types so using them will result in undefined behavior, `cclass` based on C++ inherited interface (with multiple inheritances) should define the static `cast_Base` function to generate a valid pointer casted to the base class type (it's also possible to overload the base methods in C and cast the pointer here, giving more control but losing the interest of having `cclass` inheritance)
+* only up-cast is available, casting an instance back to a child class is not allowed (it's possible using ffi.cast, but this can result in undefined behavior, like a `A*` -> `void*` -> `B*`)
+
+.2D vector behavior
+====
+[source,lua]
+----
+-- adding behavior to a struct
+
+ffi.cdef([[
+typedef struct{
+  int x;
+  int y;
+} Vec2;
+]])
+
+-- get cdata constructor
+local ct_Vec2 = ffi.typeof("Vec2")
+
+-- define the type methods
+local Vec2 = cclass("Vec2", {}, {
+  __mul_number = function(self, rhs) 
+    local v = ct_Vec2()
+    v.x = self.x*rhs
+    v.y = self.y*rhs
+
+    return v
+  end,
+  __tostring = function(self)
+    return "("..self.x..","..self.y..")"
+  end
+})
+
+-- create Vec2 instance using the ctype
+
+local vec = ct_Vec2()
+vec.x = 1
+vec.y = 2
+print(vec*10) -- "(10,20)"
+----
+====
+
+See link:examples/cclass[] to understand more the design and to interface with C++.
