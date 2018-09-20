@@ -1,5 +1,15 @@
 = Luaoop
 
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+endif::[]
+:toc: left
+:toclevels: 5
+
 Luaoop is a library to do OOP which aims to be simple, powerful and optimized (for LuaJIT).
 
 Look at the examples for more understanding of the library.
