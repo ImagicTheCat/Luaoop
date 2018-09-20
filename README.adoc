@@ -9,7 +9,7 @@ endif::[]
 :toc: left
 :toclevels: 5
 
-Luaoop is a library to do OOP which aims to be simple, powerful and optimized (for LuaJIT).
+Luaoop is a library to do OOP (Object Oriented Programming) which aims to be simple, powerful and optimized (for LuaJIT).
 
 Look at the examples for more understanding of the library.
 
@@ -19,7 +19,7 @@ Instead of adding the file manually, luarocks can be used:
 
 `luarocks install https://raw.githubusercontent.com/ImagicTheCat/Luaoop/master/rockspecs/luaoop-scm-1.rockspec`
 
-See link:rockspecs[].
+See link:rockspecs[] and https://luarocks.org/modules/imagicthecat-0a6b669a3a/luaoop[luarocks].
 
 NOTE: It is designed to work with LuaJIT (Lua 5.1), but the code should work on latest versions.
 
