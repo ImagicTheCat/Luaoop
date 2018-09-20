@@ -72,13 +72,11 @@ function class.new(name, ...)
       if not luaoop.build then class.build(base) end
     end
 
-    if #bases > 1 then -- multiple inheritance, proxy
-      setmetatable(c, { luaoop = { bases = bases } })
-      return class.new(name, c) -- then single inheritance of the proxy
-    else -- single inheritance
-      setmetatable(c, { luaoop = { bases = bases, name = name } , __call = function(c, ...) return class.instantiate(c, ...) end })
-      return c
-    end
+    return setmetatable(c, { 
+      luaoop = { bases = bases, name = name }, 
+      __call = function(c, ...) return class.instantiate(c, ...) end, 
+      __tostring = function(c) return "class<"..class.name(c)..">" end
+    })
   else
     error("class name is not a string")
   end
@@ -181,6 +179,10 @@ function class.getop(lhs, name, rhs, no_error)
         drtype = class.name(rtype)
       end
       error("operator <"..luaoop.name.."> ["..string.sub(name, 3).."] <"..drtype.."> undefined")
+    end
+  else
+    if not no_error then
+      error("left operand for operator ["..string.sub(name, 3).."] is not an instance")
     end
   end
 end

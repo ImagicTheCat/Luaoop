@@ -86,6 +86,8 @@ if not class.is(bottle, Glass) then print("is not glass") end
 print(class.name(bottle), bottle:classname())
 print(class.name(Bottle))
 print(class.name(Object))
+print(Bottle)
+print(Object)
 
 local types = class.types(bottle)
 
@@ -102,10 +104,11 @@ print("bottle id: "..class.id(bottle))
 local b = bottle*bottle
 print(b)
 
-print("b id: "..class.id(b))
+print("b id: "..class.id(b), class.data(b))
 
 -- sub a bottle by itself (0/0 bottle)
 b = bottle-bottle
 print(b)
+print(class.data(b))
 
-print("b id: "..class.id(b))
+print("b id: "..class.id(b), class.data(b))

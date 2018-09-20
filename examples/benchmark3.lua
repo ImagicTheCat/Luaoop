@@ -8,7 +8,7 @@ class = Luaoop.class
 
 local Object = class("Object")
 
-function Object:__pow_number(n)
+Object.__pow["number"] = function(self, n)
   return n
 end
 
@@ -47,15 +47,6 @@ local b = base()
 print(b:f())
 for i=1,20000000 do
   b:f()
-end
-
-print("time = "..(os.clock()-time).." s")
-
-print("\nbenchmark private access")
-
-time = os.clock()
-for i=1,20000000 do
-  local private = Object^o
 end
 
 print("time = "..(os.clock()-time).." s")
