@@ -10,7 +10,7 @@ class = Luaoop.class
 Vec3 = class("Vec3")
 
 function Vec3:__construct(x,y,z)
-  if class.instanceof(x) == "Vec3" then
+  if class.is(x, Vec3) then
     self.x = x.x
     self.y = x.y
     self.z = x.z
@@ -21,11 +21,11 @@ function Vec3:__construct(x,y,z)
   end
 end
 
-function Vec3:__add_Vec3(rhs)
+Vec3.__add[Vec3] = function(self, rhs)
   return Vec3(self.x+rhs.x, self.y+rhs.y, self.z+rhs.z)
 end
 
-function Vec3:__mul_number(rhs)
+Vec3.__mul["number"] = function(self, rhs)
   return Vec3(self.x*rhs, self.y*rhs, self.z*rhs)
 end
 
@@ -37,7 +37,7 @@ function Vec3:__tostring()
   return "("..self.x..","..self.y..","..self.z..")"
 end
 
-function Vec3:__concat_string(rhs, inverse)
+Vec3.__concat["string"] = function(self, rhs, inverse)
   if inverse then
     return rhs..self:__tostring()
   else
