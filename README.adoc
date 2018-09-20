@@ -17,7 +17,7 @@ Look at the examples for more understanding of the library.
 
 Instead of adding the file manually, luarocks can be used:
 
-`luarocks install https://raw.githubusercontent.com/ImagicTheCat/Luaoop/master/rockspecs/luaoop-scm-1.rockspec`
+`luarocks install https://raw.githubusercontent.com/ImagicTheCat/Luaoop/master/rockspecs/luaoop-scm-2.rockspec`
 
 See link:rockspecs[] and https://luarocks.org/modules/imagicthecat-0a6b669a3a/luaoop[luarocks].
 
