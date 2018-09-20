@@ -6,20 +6,6 @@ local lua5_1 = (string.find(_VERSION, "5.1") ~= nil)
 
 local class = {}
 
-local classes = {}
-
--- __index used for class inheritance (no optimization, safe access)
-local function class_index(t,k)
-  local bases = getmetatable(t).bases
-  -- find key in table properties
-  for l,v in pairs(bases) do
-    local p = v[k]
-    if type(p) == "function" then
-      return p
-    end
-  end
-end 
-
 -- force an instance to have a custom mtable (by default they share the same table for optimization)
 -- mtable: current instance mtable
 -- o: instance
@@ -42,196 +28,95 @@ local function force_custom_mtable(mtable, o)
   return mtable
 end
 
--- private access name optimization
-local private_dict = {}
-
--- return private context or nil
-local function class_pow_instance(c, o)
-  local cmtable = getmetatable(c)
-
-  if o then
-    local omtable = getmetatable(o)
-    if omtable and omtable.instance then
-      omtable = force_custom_mtable(omtable, o) -- private access requires custom properties
-
-      -- get/gen key
-      local key = private_dict[cmtable.classname]
-      if not key then
-        key = cmtable.classname.."_p"
-        private_dict[cmtable.classname] = key
-      end
-
-      local private = omtable[key]
-      if not private then
-        private = {}
-        omtable[key] = private
-      end
-
-      return private
-    end
-  end
-end
-
--- create a new class with the passed identifier (following the Lua name notation, no special chars except underscore) and base classes (multiple inheritance possible)
--- return new class
+-- create a new class
+-- name: identifier for debugging purpose
+-- ...: base classes (single/multiple inheritance)
+-- return class
 function class.new(name, ...)
-  if type(name) == "string" and string.len(name) > 0 then
+  if type(name) == "string" then
     local c = {}
     local bases = {...}
 
-    -- replace safe access
-    for k,v in pairs(bases) do
-      local c, mt = class.unsafe(v)
-      if c and mt.fclass then -- is safe access with class functionalities
-        bases[k] = c 
-      end
-    end
-
     local types = { [name] = true } -- add self type
 
-    -- check inheritance validity and build types map
-    for k,v in pairs(bases) do
-      local mtable = getmetatable(v)
-
-      if not mtable or (not mtable.classname and not mtable.bases) then -- if not a class
-        error("invalid class definition "..name)
+    -- check inheritance validity and build
+    for i,base in pairs(bases) do
+      local mtable = getmetatable(base)
+      local luaoop
+      if mtable then
+        luaoop = mtable.luaoop
       end
 
-      -- add types
-      for t,_ in pairs(mtable.types) do
-        types[t] = true
+      if not luaoop or luaoop.type then -- if not a class
+        error("invalid base class #"..i..)
       end
+
+      if not luaoop.build then class.build(base) end
     end
 
     if #bases > 1 then -- multiple inheritance, proxy
-      setmetatable(c,{ __index = class_index, bases = bases, types = types })
+      setmetatable(c, { luaoop = { bases = bases } })
       return class.new(name, c) -- then single inheritance of the proxy
     else -- single inheritance
-      setmetatable(c, { __index = class_index, bases = bases, types = types, class = true, classname = name, __call = class.instanciate, __pow = class_pow_instance})
-
-      if not classes[name] then
-        classes[name] = c -- reference class
-      else
-        error("redefinition of class "..name)
-      end
-
+      setmetatable(c, { luaoop = { bases = bases, name = name } })
       return c
     end
+  else
+    error("class name is not a string")
   end
 end
 
--- return the class definition for the specified class name (nil if not found)
--- it is a raw access, any method can be modified/added/removed
-function class.definition(name)
-  return classes[name]
-end
-
--- same as class.definition but returning a safe access class
-function class.safedef(name)
-  return class.safeaccess(class.definition(name), true)
-end
-
--- return a new table giving access to the passed table properties (prevents adding/removing/modifying properties)
--- (deep, recursive safe access on subtables)
--- useful to protect global class data from modifications (only if getmetatable is not allowed)
--- works also to get a safe class definition for inheritance and instantiation
---
--- fclass: if passed/true, will preserve class table functionalities
-function class.safeaccess(t, fclass)
-  if t then
-    local mtable = getmetatable(t) or {}
-    if not mtable.safe_access then -- check if not already a safeaccess
-      local _t = {}
-
-      local mt = {
-        safe_access = t, -- define special property to recognize safe access, save original table
-        __index = function(_t, k)
-          local v = t[k]
-          if type(v) == "table" then -- create subtable safe access
-            v = class.safeaccess(v, fclass)
-            rawset(_t,k,v) -- save access
-          end
-          
-          return v -- return regular value
-        end
-        , __newindex = function(t,k,v) end -- prevents methods obfuscation with newindex
-      }
-
-      -- flags
-      if fclass then 
-        mt.__call = mtable.__call 
-        mt.fclass = true -- flag with class functionalities
-      end
-
-      return setmetatable(_t, mt)
-    else
-      return t
-    end
-  end
-end
-
--- return the original table from a safe access table, or nil if not a safe access
--- return also the safe access metatable as second return values
-function class.unsafe(safe_access)
-  local mtable = getmetatable(safe_access)
-  if mtable and mtable.safe_access then
-    return mtable.safe_access, mtable
-  end
-end
-
--- return classname or nil if not a class or instance of class
+-- return class name or nil if not a class or instance
 function class.name(t)
-  local c, mt = class.unsafe(t)
-  if c then t = c end -- is safe access, replace with class
-
-  if t ~= nil then
+  if t then
     local mtable = getmetatable(t)
-    if mtable ~= nil then
-      return mtable.classname
+    local luaoop
+    if mtable then luaoop = mtable.luaoop end
+
+    if luaoop then
+      return luaoop.name
     end
   end
 end
 
--- return the defined classname or the lua type for an instance or class
+-- return the class of the instance (or nil if not an instance)
 function class.type(t)
-  local name = class.name(t)
-  if name == nil then
-    name = type(t)
-  end
+  if t then
+    local mtable = getmetatable(t)
+    local luaoop
+    if mtable then luaoop = mtable.luaoop end
 
-  return name
+    if luaoop then
+      return luaoop.type
+    end
+  end
 end
 
--- check if an instance/class is/inherits from a specific classname
-function class.is(t, name)
-  local c, mt = class.unsafe(t)
-  if c then t = c end -- is safe access, replace with class
-
-  if t ~= nil then
+-- check if an instance/class is/inherits from a specific class
+function class.is(t, class)
+  if t then
     local mtable = getmetatable(t)
-    if mtable ~= nil then
-      local types = mtable.types
-      if types ~= nil then return types[name] ~= nil end
+    local luaoop
+    if mtable then luaoop = mtable.luaoop end
+
+    if luaoop and luaoop.types then
+      return luaoop.types[class]
     end
   end
 
   return false
 end
 
--- alias for inherits
-class.instanceof = class.is
-
--- return instance/class types map (type => true)
+-- return instance/class types map (type => true) or nil if not a class or instance
 function class.types(t)
-  local c, mt = class.unsafe(t)
-  if c then t = c end -- is safe access, replace with class
-
-  if t ~= nil then
+  if t then
     local mtable = getmetatable(t)
-    if mtable ~= nil and mtable.types ~= nil then
-      -- return a copy of the types map
+    local luaoop
+    if mtable then luaoop = mtable.luaoop end
+
+    if luaoop and luaoop.types then
       local types = {}
-      for k,v in pairs(mtable.types) do
+      for k,v in pairs(luaoop.types) do
         types[k] = v
       end
 
@@ -243,7 +128,9 @@ end
 -- optimize special method name resolution
 local op_dict = {}
 
--- get operator from instance/class, rhs_class can be nil for unary operators
+-- get operator from instance/class
+-- rhs_class: can be nil for unary operators
+-- no_error: if passed/true, will not display error if the operator is not found
 function class.getop(lhs_class, name, rhs_class, no_error)
   local f = nil
 
@@ -392,23 +279,10 @@ local function op_le(lhs,rhs)
   end
 end
 
--- __index used for instance inheritance (optimization)
-local function instance_index(t,k)
-  local mtable = getmetatable(t)
-  local p = mtable.class[k]
-
-  t[k] = p -- cache member
-  return p
-end
-
--- instantiated type mtables, optimize instanciation (no custom mtable properties)
-local insmt_dict = {}
-
 -- get the class metatable applied to the instances
 -- useful to apply class behaviour to a custom table
--- (not a safe access)
-function class.meta(_class)
-  if _class then
+function class.meta(class)
+  if class then
     local cmtable = getmetatable(_class)
 
     if cmtable and cmtable.class and cmtable.classname then -- if a class
@@ -447,12 +321,9 @@ function class.meta(_class)
   end
 end
 
--- create object with a specific class and constructor arguments 
-function class.instanciate(_class, ...)
-  local c, mt = class.unsafe(_class)
-  if c and mt.fclass then _class = c end -- is safe access with class functionalities, replace with class
-
-  local mtable = class.meta(_class) -- get class meta
+-- create instance with from a specific class followed by constructor arguments 
+function class.instantiate(class, ...)
+  local mtable = class.meta(class) -- get class meta
 
   if mtable then -- valid meta
     -- create instance
@@ -483,21 +354,71 @@ function class.instanciate(_class, ...)
   end
 end
 
--- propagate changes for the specified string instance types
--- this function is not about class propagation (since class properties are not cached), but instance type propagation
--- you need to call it for every instantiated types that should inherit the new modifications
--- ...: list of types (strings) that will be updated
-function class.propagate(...)
-  for k,v in pairs({...}) do
-    local mtable = insmt_dict[v]
-    if mtable then
-      -- remove instantiated type cached properties
-      local index = mtable.__index
-      for k,v in pairs(index) do
-        index[k] = nil
+-- build class
+-- if a class is not already built, when used for inheritance or instantiation this function will be called
+function class.build(class)
+  if class then
+    local mtable = getmetatable(class)
+    local luaoop
+    if mtable then luaoop = mtable.luaoop end
+
+    if luaoop and not luaoop.type then
+      -- build
+
+      --- class inheritance
+      for _,base in ipairs(luaoop.bases) do
+        for k,v in pairs(base) do
+          if type(v) == "table" and string.sub(k, 1, 2) == "__" then -- inherit/merge special tables
+            local table = class[k]
+            if not table then
+              table = {}
+              class[k] = table
+            end
+
+            for tk, tv in pairs(v) do
+              if table[tk] ~= nil then -- inherit table property
+                table[tk] = tv
+              end
+            end
+          else -- inherit regular property
+            if class[k] ~= nil then
+              class[k] = v
+            end
+          end
+        end
       end
-    else
-      error(v.." is not an instantiated type")
+
+      --- build generic instance metatable
+      ---- build index
+      local index = {}
+      for k,v in pairs(class) do
+        if not type(v) == "table" or string.sub(k, 1, 2) == "__" then -- everything but special tables
+          index[k] = v
+        end
+      end
+
+      ---- build metatable (TODO)
+      luaoop.meta = {
+        __index = index, 
+        instance = true,
+        classname = cmtable.classname,
+        types = cmtable.types,
+
+        -- add operators metamethods
+        __call = op_call,
+        __unm = op_unm,
+        __add = op_add,
+        __sub = op_sub,
+        __mul = op_mul,
+        __div = op_div,
+        __pow = op_pow,
+        __mod = op_mod,
+        __eq = op_eq,
+        __le = op_le,
+        __lt = op_lt,
+        __tostring = op_tostring,
+        __concat = op_concat
+      }
     end
   end
 end
@@ -512,27 +433,49 @@ local addr_counter = 0 -- addr counter in replacement of table_addr
 
 -- return unique instance id (or nil if not an instance)
 -- works by using tostring(table) address hack or using a counter instead on failure
-function class.instanceid(o)
-  if o then
-    local mtable = getmetatable(o)
-    mtable = force_custom_mtable(mtable, o) -- instanceid requires custom properties
+function class.id(t)
+  if t then
+    local mtable = getmetatable(t)
+    local luaoop
+    if mtable then luaoop = mtable.luaoop end
+    if luaoop then
+      mtable = force_custom_mtable(mtable, t) -- id requires custom properties
 
-    if mtable.id then -- return existing id
-      return mtable.id
-    elseif mtable.instance then  -- generate id
-      -- remove tostring proxy
-      mtable.__tostring = nil
-      -- generate addr
-      mtable.id = table_addr(o)
-      -- reset tostring proxy
-      mtable.__tostring = op_tostring
+      if luaoop.id then -- return existing id
+        return luaoop.id
+      elseif luaoop.type then -- generate id
+        -- remove tostring proxy
+        mtable.__tostring = nil
+        -- generate addr
+        luaoop.id = table_addr(t)
+        -- reset tostring proxy
+        mtable.__tostring = op_tostring
 
-      if not mtable.id then
-        mtable.id = addr_counter
-        addr_counter = addr_counter+1
+        if not luaoop.id then
+          luaoop.id = addr_counter
+          addr_counter = addr_counter+1
+        end
+
+        return luaoop.id
+      end
+    end
+  end
+end
+
+-- return unique instance data table (or nil if not an instance)
+function class.data(t)
+  if t then
+    local mtable = getmetatable(t)
+    local luaoop
+    if mtable then luaoop = mtable.luaoop end
+    if luaoop and luaoop.type then
+      mtable = force_custom_mtable(mtable, t) -- data requires custom properties
+
+      if not luaoop.data then -- create data table
+        luaoop.data = {}
       end
 
-      return mtable.id
+      return luaoop.data
     end
   end
 end
@@ -544,7 +487,6 @@ end})
 
 -- NAMESPACES
 Luaoop.class = class
-
 
 
 -- LuaJIT CCLASS MODULE

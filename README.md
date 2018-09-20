@@ -1,5 +1,4 @@
-Luaoop is a small library to do OOP.
-The library aim interesting features like the C++ OOP with additional reflexive tools.
+Luaoop is a library to do OOP which aims to be simple, powerful and optimized (for LuaJIT).
 
 Look at the examples for more understanding of the library.
 
@@ -15,7 +14,7 @@ Replace the rockspec with the one you want.
 
 ## Version
 
-It is designed to work with luajit (Lua 5.1), but the code should work on latest versions.
+It is designed to work with LuaJIT (Lua 5.1), but the code should work on latest versions.
 
 ## API
 
