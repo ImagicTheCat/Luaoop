@@ -370,8 +370,6 @@ function class.build(classdef)
     if mtable then luaoop = mtable.luaoop end
 
     if luaoop and not luaoop.type then
-      print("build "..class.name(classdef))
-
       -- build
       -- prepare build, table with access to the class inherited properties
       if not luaoop.build then luaoop.build = {} end
