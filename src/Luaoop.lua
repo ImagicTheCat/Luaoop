@@ -370,6 +370,8 @@ function class.build(classdef)
     if mtable then luaoop = mtable.luaoop end
 
     if luaoop and not luaoop.type then
+      print("build "..class.name(classdef))
+
       -- build
       -- prepare build, table with access to the class inherited properties
       if not luaoop.build then luaoop.build = {} end
@@ -402,12 +404,30 @@ function class.build(classdef)
             end
 
             for tk, tv in pairs(v) do
-              table[k][tk] = tv
+              table[tk] = tv
             end
           else -- inherit regular property
             luaoop.build[k] = v
           end
         end
+
+        -- class build properties
+        for k,v in pairs(base_luaoop.build) do
+          if type(v) == "table" and string.sub(k, 1, 2) == "__" then -- inherit/merge special tables
+            local table = luaoop.build[k]
+            if not table then
+              table = {}
+              luaoop.build[k] = table
+            end
+
+            for tk, tv in pairs(v) do
+              table[tk] = tv
+            end
+          else -- inherit regular property
+            luaoop.build[k] = v
+          end
+        end
+
       end
 
       -- add self type
