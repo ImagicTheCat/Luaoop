@@ -1,8 +1,8 @@
 package = "Luaoop"
-version = "1.0-1"
+version = "1.1-1"
 source = {
   url = "git://github.com/ImagicTheCat/Luaoop",
-  tag = "1.0"
+  tag = "1.1"
 }
 
 description = {
