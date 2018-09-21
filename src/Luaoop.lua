@@ -392,23 +392,6 @@ function class.build(classdef)
           luaoop.types[t] = true
         end
 
-        -- class properties
-        for k,v in pairs(base) do
-          if type(v) == "table" and string.sub(k, 1, 2) == "__" then -- inherit/merge special tables
-            local table = luaoop.build[k]
-            if not table then
-              table = {}
-              luaoop.build[k] = table
-            end
-
-            for tk, tv in pairs(v) do
-              table[tk] = tv
-            end
-          else -- inherit regular property
-            luaoop.build[k] = v
-          end
-        end
-
         -- class build properties
         for k,v in pairs(base_luaoop.build) do
           if type(v) == "table" and string.sub(k, 1, 2) == "__" then -- inherit/merge special tables
@@ -426,6 +409,22 @@ function class.build(classdef)
           end
         end
 
+        -- class properties
+        for k,v in pairs(base) do
+          if type(v) == "table" and string.sub(k, 1, 2) == "__" then -- inherit/merge special tables
+            local table = luaoop.build[k]
+            if not table then
+              table = {}
+              luaoop.build[k] = table
+            end
+
+            for tk, tv in pairs(v) do
+              table[tk] = tv
+            end
+          else -- inherit regular property
+            luaoop.build[k] = v
+          end
+        end
       end
 
       -- add self type
