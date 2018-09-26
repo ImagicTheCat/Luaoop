@@ -253,6 +253,7 @@ data:: return the datatable associated to this instance (per type, a cast from t
 * the `cclass` constructor will call `new` and bind the `delete` to `ffi.gc`, so new and delete are expected to manage heap memory, but having a `new/delete` is not required, any way used to obtain a valid cdata will allow the use of the methods (thanks to FFI metatypes)
 * multiple inheritances is possible, but remember that LuaJIT can't know how C++ cast multiple inherited pointer types so using them will result in undefined behavior, `cclass` based on C++ inherited interface (with multiple inheritances) should define the static `cast_Base` function to generate a valid pointer casted to the base class type (it's also possible to overload the base methods in C and cast the pointer here, giving more control but losing the interest of having `cclass` inheritance)
 * only up-cast is available, casting an instance back to a child class is not allowed (it's possible using ffi.cast, but this can result in undefined behavior, like a `A*` -> `void*` -> `B*`)
+* a cclass instance (cdata instance) should be safe to handle as long as pointers are valid and checked to be not null in methods
 
 .2D vector behavior
 ====
