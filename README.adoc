@@ -191,6 +191,79 @@ There are no private/protected mechanisms in Luaoop.
 
 "Private" instance properties can be achieved using `class.data`, it can be used to keep some data away from the instance user.
 
+== Behavior transfer
+
+It's possible to give Luaoop class and instance behavior to any object by adding the `luaoop` property (a table) to its metatable (and set some metamethods). 
+
+=== Class behavior
+
+TIP: `class.new` will check (and build if not built) base classes and initializes class special tables. It is easier to use this function and copy/modify the metatable afterwards.
+
+.Base properties
+[horizontal]
+name:: class name
+bases:: list of base classes
+
+Optional build hooks can be added to customize some parts of the build process, they are functions starting with `__`.
+
+.Build hooks
+[horizontal]
+postbuild(class, build):: used to add more properties to the build, called after the base classes inheritance process
+postmeta(class, meta):: used to modify the built instance metatable, called at the end of the build process
+
+.After-build properties
+[horizontal]
+build:: table containing inherited properties and special tables for the class
+instance_build:: table containing inherited properties without special tables (merged with class properties)
+types:: map of type (class) => true
+meta:: metatable built used for the instances
++
+====
+.Base properties
+[horizontal]
+type:: instance type
+types:: map of type (class) => true
+name:: base class name
+
+Optional hooks can be added to customize the instances behavior, they are functions starting with `__`.
+
+.Hooks
+[horizontal]
+data(instance):: should return the instance datatable
+id(instance):: should return the instance id (number)
+
+.Metamethods
+[horizontal]
+index:: inherits from class `instance_build`
+call:: op call
+unm:: op unm
+add:: op add
+sub:: op sub
+mul:: op mul
+div:: op div
+pow:: op pow
+mod:: op mod
+eq:: op eq
+le:: op le
+lt:: op lt
+tostring:: op tostring
+concat:: op concat
+====
+
+NOTE: It's easier to let these properties being created by `class.build` and just implement the build hooks.
+
+.Metamethods
+[horizontal]
+call:: shortcut for `class.instantiate`
+tostring:: for regular classes, will print `class<name>`
+index:: inherits from the `build` table and each special tables inherit from `build` special tables
+
+=== Instance behavior
+
+The instance behavior is set using the `meta` built metatable. If `data` or `id` hooks are not set, this metatable could be replaced by a copy (not deep) to have custom fields (to store data and id). 
+
+TIP: The new metatable would be marked as custom with a `luaoop.custom` boolean property set to true.
+
 == CClass (LuaJIT)
 
 Luaoop also have a `cclass` module to create "C-like FFI interface class", taking advange of the FFI metatype of LuaJIT.

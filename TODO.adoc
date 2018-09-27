@@ -2,4 +2,3 @@
 = TODO
 
 * operator rhs inherited types resolution
-* Luaoop behavior custom implementation (cclass <-> class interaction or with third party)

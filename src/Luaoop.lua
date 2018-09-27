@@ -55,8 +55,6 @@ function class.new(name, ...)
     }
     local bases = {...}
 
-    local types = { [name] = true } -- add self type
-
     -- check inheritance validity and build
     for i,base in pairs(bases) do
       local mtable = getmetatable(base)
@@ -430,6 +428,11 @@ function class.build(classdef)
       -- add self type
       luaoop.types[classdef] = true
 
+      -- postbuild hook
+      if luaoop.__postbuild then
+        luaoop.__postbuild(classdef, luaoop.build)
+      end
+
       --- build generic instance metatable
       ---- instance build
       for k,v in pairs(luaoop.build) do -- class build, everything but special tables
@@ -449,7 +452,6 @@ function class.build(classdef)
         luaoop.meta = {
           __index = luaoop.instance_build, 
           luaoop = {
-            bases = luaoop.bases,
             name = luaoop.name,
             types = luaoop.types,
             type = classdef
@@ -470,6 +472,11 @@ function class.build(classdef)
           __tostring = op_tostring,
           __concat = op_concat
         }
+
+        -- postmeta hook
+        if luaoop.__postmeta then
+          luaoop.__postmeta(classdef, luaoop.meta)
+        end
       end
 
       -- setup class 
@@ -502,24 +509,28 @@ function class.id(t)
     local luaoop
     if mtable then luaoop = mtable.luaoop end
     if luaoop then
-      mtable, luaoop = force_custom_mtable(mtable, t) -- id requires custom properties
+      if luaoop.__id then -- id hook
+        return luaoop.__id(t)
+      else -- regular
+        mtable, luaoop = force_custom_mtable(mtable, t) -- id requires custom properties
 
-      if luaoop.id then -- return existing id
-        return luaoop.id
-      elseif luaoop.type then -- generate id
-        -- remove tostring proxy
-        mtable.__tostring = nil
-        -- generate addr
-        luaoop.id = table_addr(t)
-        -- reset tostring proxy
-        mtable.__tostring = op_tostring
+        if luaoop.id then -- return existing id
+          return luaoop.id
+        elseif luaoop.type then -- generate id
+          -- remove tostring proxy
+          mtable.__tostring = nil
+          -- generate addr
+          luaoop.id = table_addr(t)
+          -- reset tostring proxy
+          mtable.__tostring = op_tostring
 
-        if not luaoop.id then
-          luaoop.id = addr_counter
-          addr_counter = addr_counter+1
+          if not luaoop.id then
+            luaoop.id = addr_counter
+            addr_counter = addr_counter+1
+          end
+
+          return luaoop.id
         end
-
-        return luaoop.id
       end
     end
   end
@@ -533,13 +544,17 @@ function class.data(t)
     local luaoop
     if mtable then luaoop = mtable.luaoop end
     if luaoop and luaoop.type then
-      mtable, luaoop = force_custom_mtable(mtable, t) -- data requires custom properties
+      if luaoop.__data then -- data hook
+        return luaoop.__data(t)
+      else -- regular
+        mtable, luaoop = force_custom_mtable(mtable, t) -- data requires custom properties
 
-      if not luaoop.data then -- create data table
-        luaoop.data = {}
+        if not luaoop.data then -- create data table
+          luaoop.data = {}
+        end
+
+        return luaoop.data
       end
-
-      return luaoop.data
     end
   end
 end
