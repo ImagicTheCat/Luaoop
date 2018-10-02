@@ -1,6 +1,9 @@
 local Luaoop = {}
 
 local lua5_1 = (string.find(_VERSION, "5.1") ~= nil)
+local unpack = table.unpack or unpack
+local _getmetatable = getmetatable
+local getmetatable = _getmetatable
 
 -- CLASS MODULE
 
@@ -326,34 +329,45 @@ end
 -- classdef: class
 -- ...: constructor arguments
 function class.instantiate(classdef, ...)
-  local meta = class.meta(classdef)
+  local mtable = getmetatable(classdef)
+  local luaoop
+  if mtable then luaoop = mtable.luaoop end
 
-  if meta then -- valid meta
-    -- create instance
-    local t = setmetatable({}, meta) 
-
-    local constructor = t.__construct
-    local destructor = t.__destruct
-
-    if destructor then
-      local mtable, luaoop = force_custom_mtable(meta, t) -- gc requires custom properties
-
-      local gc = function()
-        destructor(t)
-      end
-
-      if lua5_1 then -- Lua 5.1
-        local proxy = newproxy(true)
-        getmetatable(proxy).__gc = gc
-        luaoop.proxy = proxy
-      else
-        luaoop.proxy = setmetatable({}, { __gc = gc })
-      end
+  if luaoop and not luaoop.type then -- valid class
+    if not luaoop.build then
+      class.build(classdef)
     end
 
-    -- construct
-    if constructor then constructor(t, ...) end
-    return t
+    local __instantiate = luaoop.__instantiate
+    if __instantiate then -- instantiate hook
+      return __instantiate(classdef, ...)
+    else -- regular
+      -- create instance
+      local t = setmetatable({}, luaoop.meta) 
+
+      local constructor = t.__construct
+      local destructor = t.__destruct
+
+      if destructor then
+        local mtable, luaoop = force_custom_mtable(meta, t) -- gc requires custom properties
+
+        local gc = function()
+          destructor(t)
+        end
+
+        if lua5_1 then -- Lua 5.1
+          local proxy = newproxy(true)
+          getmetatable(proxy).__gc = gc
+          luaoop.proxy = proxy
+        else
+          luaoop.proxy = setmetatable({}, { __gc = gc })
+        end
+      end
+
+      -- construct
+      if constructor then constructor(t, ...) end
+      return t
+    end
   end
 end
 
@@ -576,378 +590,199 @@ local ffi = require("ffi")
 local C = ffi.C
 local cclass = {}
 
+-- cclass ffi.metatype getmetatable compatibility fix
+-- getmetatable is local, defined at the begining of this file
+local metatypes = {}
+getmetatable = function(t) 
+  if type(t) == "cdata" then
+    return metatypes[tostring(ffi.typeof(t))]
+  else
+    return _getmetatable(t)
+  end
+end
+
 -- change the symbols dict for the next following cclass (ffi.C by default)
 function cclass.symbols(symbols)
   C = symbols
 end
 
 local cintptr_t = ffi.typeof("intptr_t")
-local function f_id(self)
-  return tonumber(ffi.cast(cintptr_t, self))
+local function f_id(t)
+  return tonumber(ffi.cast(cintptr_t, t))
 end
 
--- NOTE: operator redundant code until better way
+-- define cclass C function with parameters cast
+-- func(C, ...): proxy function, nil for direct C call
+--- C: original C function
+--- ...: function arguments
+-- ...: list of cclass types expected (as class) for function arguments (nil for any type of value)
+-- return cclass C function definition structure
+function cclass.define(func, ...)
+  return {
+    luaoop_cclass_def = true,
+    f = func,
+    types = {...}
+  }
+end
 
--- optimize special method name resolution
-local op_dict = {}
-
--- get operator from instance lhs, rhs can be nil for unary operators
-local function getop(lhs, name, rhs, no_error)
-  local f = nil
-
-  local rtype = nil
-  if type(rhs) == "cdata" then
-    rtype = rhs:__type()
-  else
-    rtype = type(rhs)
-  end
-
-  local ltype = nil
-  if type(lhs) == "cdata" then
-    ltype = lhs:__type()
-  else
-    ltype = type(lhs)
-  end
-
-  -- optimization using op_dict
-  local dict = op_dict[name]
-  if not dict then
-    dict = {}
-    op_dict[name] = dict
-  end
-
-  -- method name
-  local fname = dict[rtype]
-  if not fname then -- generate fname
-    if rhs then
-      fname = "__"..name.."_"..rtype
-    else
-      fname = "__"..name
+-- cast instance
+-- t: cclass instance
+-- c: cast type
+-- return casted instance or nil
+function cclass.cast(t, c)
+  if t then
+    local mtable = getmetatable(t)
+    local luaoop
+    if mtable then luaoop = mtable.luaoop end
+    if luaoop and luaoop.type and luaoop.type.__cast then -- t is a cclass instance
+      local fcast = luaoop.type.__cast[c]
+      if fcast then
+        return fcast(t)
+      end
     end
-
-    dict[rtype] = fname
-  end
-
-  if type(lhs) == "cdata" then
-    f = lhs:__get(fname)
-  end
-
-  if f then
-    return f
-  elseif not no_error then
-    error("operator <"..ltype.."> ["..name.."] <"..rtype.."> undefined")
-  end
-end
-
--- proxy lua operators
-local function op_tostring(lhs)
-  local f = getop(lhs, "tostring", nil, true)
-  if f then
-    return f(lhs)
-  else
-    return "cclass<"..lhs:__type()..">: "..lhs:__id()
-  end
-end
-
-local function op_concat(lhs,rhs)
-  local f = getop(lhs, "concat", rhs, true)
-  if f then 
-    return f(lhs,rhs) 
-  end
-
-  f = getop(rhs, "concat", lhs)
-  if f then 
-    return f(rhs,lhs,true) 
-  end
-end
-
-local function op_unm(lhs)
-  local f = getop(lhs, "unm", nil)
-  if f then return f(lhs) end
-end
-
-local function op_call(lhs, ...)
-  local f = getop(lhs, "call", nil)
-  if f then return f(lhs, ...) end
-end
-
-local function op_add(lhs,rhs)
-  local f = getop(lhs, "add", rhs, true)
-  if f then 
-    return f(lhs,rhs) 
-  end
-
-  f = getop(rhs, "add", lhs)
-  if f then 
-    return f(rhs,lhs) 
-  end
-end
-
-local function op_sub(lhs,rhs) -- also deduced as lhs+(-rhs)
-  local f = getop(lhs, "sub", rhs, true)
-  if f then 
-    return f(lhs,rhs)
-  end
-
-  f = getop(lhs, "add", rhs)
-  if f then
-    return f(lhs, -rhs)
-  end
-end
-
-local function op_mul(lhs,rhs)
-  local f = getop(lhs, "mul", rhs, true)
-  if f then 
-    return f(lhs,rhs) 
-  end
-
-  f = getop(rhs, "mul", lhs)
-  if f then 
-    return f(rhs,lhs) 
-  end
-end
-
-local function op_div(lhs,rhs)
-  local f = getop(lhs, "div", rhs)
-  if f then 
-    return f(lhs,rhs) 
-  end
-end
-
-local function op_mod(lhs,rhs)
-  local f = getop(lhs, "mod", rhs)
-  if f then 
-    return f(lhs,rhs) 
-  end
-end
-
-local function op_pow(lhs,rhs)
-  local f = getop(lhs, "pow", rhs)
-  if f then 
-    return f(lhs,rhs) 
-  end
-end
-
-local function op_eq(lhs,rhs)
-  local f = getop(lhs, "eq", rhs, true)
-  if f then 
-    return f(lhs,rhs) 
-  end
-end
-
-local function op_lt(lhs,rhs)
-  local f = getop(lhs, "lt", rhs)
-  if f then 
-    return f(lhs,rhs) 
-  end
-end
-
-local function op_le(lhs,rhs)
-  local f = getop(lhs, "le", rhs)
-  if f then 
-    return f(lhs,rhs) 
   end
 end
 
 -- create C-like FFI class
 -- name: name of the class, used to define the cdata type and the functions prefix
--- statics: static functions exposed to the class object, special functions are exposed by default
--- methods: methods exposed to the instances, special methods are overridden
--- ...: inherited bases cclass 
-function cclass.new(name, statics, methods, ...)
-  local ctype = ffi.typeof(name)
-  local pctype = ffi.typeof(name.."*")
-  local bases = {...}
+-- ...: inherited base classes 
+-- return created cclass
+function cclass.new(name, ...)
+  local c = class.new(name, ...)
+  if c then
+    c.__cast = {} -- cast special table
 
-  local types = { [name] = true }
-  -- cast functions for each base (and parent bases) type
-  local casts = { [name] = function(cdata) return cdata end } -- identity cast
+    local ctype = ffi.typeof(name)
+    local pctype = ffi.typeof(name.."*")
 
-  -- build metatype
+    local mtable = getmetatable(c)
+    local luaoop = mtable.luaoop
+    local luaoop_cclass = {
+      ctype = ctype,
+      pctype = pctype
+    }
+    mtable.luaoop_cclass = luaoop_cclass -- mark as cclass
 
-  local index = {} -- instance index
-  local imethods = {} -- class methods index (defined function or direct ffi binding)
-  local istatics = {} -- class statics index (defined function or direct ffi binding)
+    luaoop.__postbuild = function(c, build)
+      -- auto register new/delete/casts special statics
+      c.__new = c.__new or cclass.define()
+      c.__delete = c.__delete or cclass.define(nil, c)
 
-  -- add statics def
-
-  -- auto register new/delete/casts static methods
-  statics.new = statics.new or true
-  statics.delete = statics.delete or true
-  for k,base in pairs(bases) do
-    local bmtable = getmetatable(base)
-    if bmtable and bmtable.cclass then
-      local index = "cast_"..bmtable.name
-      statics[index] = statics[index] or true
-    end
-  end
-
-  for k,v in pairs(statics) do
-    -- bind ffi call
-    local symbol = name.."_"..k
-    local ok = pcall(function() return ffi.cast("void*", C[symbol]) end)
-    if ok then -- ffi symbol exists
-      local f = C[symbol]
-      istatics[k] = f -- add to defindex
-      istatics["__c_"..k] = f -- save local ffi binding
-    end
-
-    if type(v) ~= "boolean" then -- bind lua function
-      istatics[k] = v  -- add to defindex
-    end
-  end
-
-  -- add special statics
-  istatics.name = function() return name end
-
-  -- add methods def
-
-  for k,base in pairs(bases) do
-    -- inherit from base
-    local bmtable = getmetatable(base) 
-    if bmtable and bmtable.cclass then
-      -- generate base cast function
-      local pctype = bmtable.pctype
-      local bname = bmtable.name
-      local bcast = istatics["cast_"..bname] -- get defined cast
-      if not bcast then -- generate ffi cast
-        bcast = function(cdata) return ffi.cast(pctype, cdata) end
-      end
-
-      -- add proxied base casts
-      for k,v in pairs(bmtable.casts) do
-        casts[k] = function(cdata)
-          return v(bcast(cdata))
+      for k,base in pairs(luaoop.bases) do -- casts to base cclasses
+        local bmtable = getmetatable(base)
+        if bmtable and bmtable.luaoop_cclass then
+          c.__cast[base] = c.__cast[base] or function(self)
+            if class.is(self, base) then
+              -- simple cast default
+              return ffi.cast(bmtable.luaoop_cclass.pctype, self)
+            end
+          end
         end
       end
- 
-      casts[bname] = bcast
 
-      -- methods
+      -- register class functions
+      for k,v in pairs(c) do
+        if type(v) == "table" and v.luaoop_cclass_def then -- if a cclass C function define
+          -- check argument types
+          for i,_type in pairs(v.types) do
+            local mtable = getmetatable(_type)
+            if not mtable or not mtable.luaoop_cclass then
+              error("wrong parameter type of cclass C function definition")
+            end
+          end
 
-      -- copy base defindex
-      for k,v in pairs(bmtable.imethods) do
-        -- casted function proxy
-        local f = function(self, ...)
-          return v(bcast(self), ...)
+          -- bind FFI call
+          local symbol = name.."_"..k
+          local ok = pcall(function() return ffi.cast("void*", C[symbol]) end)
+          if ok then -- FFI symbol exists
+            local cf = C[symbol] -- C function
+            local f = v.f -- Lua function
+            local pf = function(...) -- proxy function
+              -- cast arguments
+              local args = {...}
+
+              for i,_type in pairs(v.types) do 
+                local arg = args[i]
+                if class.type(arg) ~= _type then -- not good type, try cast
+                  local casted = cclass.cast(arg, _type)
+                  if casted then
+                    args[i] = casted
+                  else
+                    local arg_type = class.type(arg)
+                    error("can't cast "..(arg_type and tostring(arg_type) or type(arg)).." to "..tostring(_type))
+                  end
+                end
+              end
+
+              -- compute max argument
+              local max = 0
+              for i in pairs(args) do
+                if i > max then max = i end
+              end
+
+              -- call
+              if f then -- Lua function proxy
+                return f(cf, unpack(args, 1, max))
+              else -- direct FFI call
+                return cf(unpack(args, 1, max))
+              end
+            end
+
+            c[k] = pf
+          else 
+            error("can't find FFI symbol "..symbol)
+          end
+        end
+      end
+    end
+
+    local data_tables = setmetatable({}, { __mode = "v" })
+    local data_refs = setmetatable({}, { __mode = "k" })
+
+    local function f_data(t)
+      -- find ref to data table for this cdata
+      local ref = data_refs[t]
+      if not ref then
+        local id = class.id(t)
+        -- get data table for this id/address
+        local dt = data_tables[id]
+        if not dt then
+          -- create the data table
+          dt = {}
+          data_tables[id] = dt
         end
 
-        imethods[k] = f
-        index[k] = f -- copy defs
-        index["__s_"..k] = f -- save as super
-        index["__s_"..bmtable.name.."_"..k] = f -- save as absolute super alias
+        -- set reference
+        ref = dt
+        data_refs[t] = ref
       end
 
-      -- add base types
-      for k,v in pairs(bmtable.types) do
-        types[k] = v
+      -- return data table
+      return ref
+    end
+
+    luaoop.__instantiate = function(c, ...)
+      local new = c.__new
+      local delete = c.__delete
+      if new and delete then
+        return ffi.gc(new(...), delete)
+      else
+        error("can't instanciate cclass "..class.name(c).." : missing new and/or delete functions")
       end
     end
-  end
 
-  for k,v in pairs(methods) do
-    -- bind ffi call
-    local symbol = name.."_"..k
-    local ok = pcall(function() return ffi.cast("void*", C[symbol]) end)
-    if ok then -- ffi symbol exists
-      local f = C[symbol]
-      imethods[k] = f -- add to defindex
-      index[k] = f -- as direct call
-      index["__c_"..k] = f -- save local ffi binding
+    luaoop.__postmeta = function(c, meta)
+      meta.luaoop.__id = f_id -- id behavior
+      meta.luaoop.__data = f_data -- data behavior (return data table per type&instance)
+
+      -- setup metatype
+      ffi.metatype(ctype, meta)
+      metatypes[tostring(ctype)] = meta 
+      metatypes[tostring(pctype)] = meta 
     end
 
-    if type(v) ~= "boolean" then -- bind lua function
-      index[k] = v
-      imethods[k] = v  -- add to defindex
-    end
+    return c
   end
-
-
-
-  -- add special methods
-
-  index.__id = f_id -- __id()
-
-  function index:__type() -- __type()
-    return name
-  end
-
-  function index:__instanceof(stype) -- __instanceof()
-    return types[stype] ~= nil
-  end
-
-  function index:__cast(stype) -- __cast()
-    local f = casts[stype]
-    if f then
-      return f(self)
-    else
-      error("can't up-cast "..self:__type().." to "..stype)
-    end
-  end
-
-  function index:__get(member) -- __get()
-    return index[member]
-  end
-
-  -- __data() (return data table per type&instance)
-  local data_tables = setmetatable({}, { __mode = "v" })
-  local data_refs = setmetatable({}, { __mode = "k" })
-  function index:__data()
-    -- find ref to data table for this cdata
-    local ref = data_refs[self]
-    if not ref then
-      local id = self:__id()
-      -- get data table for this id/address
-      local dt = data_tables[id]
-      if not dt then
-        -- create the data table
-        dt = {}
-        data_tables[id] = dt
-      end
-
-      -- set reference
-      ref = dt
-      data_refs[self] = ref
-    end
-
-    -- return data table
-    return ref
-  end
-
-  -- setup metatype
-
-  local mtable = {
-    __index = index,
-    __call = op_call,
-    __unm = op_unm,
-    __add = op_add,
-    __sub = op_sub,
-    __mul = op_mul,
-    __div = op_div,
-    __pow = op_pow,
-    __mod = op_mod,
-    __eq = op_eq,
-    __le = op_le,
-    __lt = op_lt,
-    __tostring = op_tostring,
-    __concat = op_concat
-  }
-
-  ffi.metatype(ctype, mtable)
-
-  -- setup class
-  
-  local instanciate = function(c, ...)
-    local new = c.new
-    local delete = c.delete
-    if new and delete then
-      return ffi.gc(new(...), delete)
-    else
-      error("can't instanciate cclass "..name.." : missing new and/or delete functions")
-    end
-  end
-
-  return setmetatable({}, { __call = instanciate, __index = istatics, __new_index = function() end, cclass = true, name = name, imethods = imethods, pctype = pctype, casts = casts, types = types })
 end
 
 -- SHORTCUTS
@@ -956,6 +791,7 @@ setmetatable(cclass, { __call = function(t, ...)
 end})
 
 Luaoop.cclass = cclass
+
 end
 
 return Luaoop

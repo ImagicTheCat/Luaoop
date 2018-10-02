@@ -5,26 +5,32 @@ package.path = ";../../src/?.lua;"..package.path
 local ffi = require("ffi")
 
 local Luaoop = require("Luaoop")
+class = Luaoop.class
 cclass = Luaoop.cclass
 
 -- def
 ffi.cdef([[
 typedef struct{} Animal;
-Animal* Animal_new();
+Animal* Animal___new();
 void Animal_eat(Animal*);
-void Animal_delete(Animal*);
+void Animal___delete(Animal*);
 
 typedef struct{} Cat;
-Cat* Cat_new();
+Cat* Cat___new();
 void Cat_scratch(Cat*);
-void Cat_delete(Cat*);
-int Cat___mul_number(Cat*, int);
+void Cat___delete(Cat*);
 ]])
 
 local libanimal = ffi.load("animal", true)
 
-local Animal = cclass("Animal", {}, { eat = true })
-local Cat = cclass("Cat", {}, { scratch = true, __mul_number = true }, Animal)
+local Animal = cclass("Animal")
+Animal.eat = cclass.define(nil, Animal)
+
+local Cat = cclass("Cat", Animal)
+Cat.scratch = cclass.define(nil, Cat)
+Cat.__mul.number = function(self, n)
+  return 42*n
+end
 
 -- test
 
@@ -35,13 +41,18 @@ an:eat()
 cat:eat()
 cat:scratch()
 
-print("an", an:__id(), an:__type())
-print("cat", cat:__id(), cat:__type())
+print("an", class.id(an), class.type(an))
+print("cat", class.id(cat), class.type(cat))
 
-print(cat:__instanceof("Cat"), cat:__instanceof(Cat.name()), cat:__instanceof("Animal"), cat:__instanceof("Object"))
-print(cat:__cast("Animal"):eat())
+print(class.is(cat, Cat), class.is(cat, Animal))
+print(class.type(cclass.cast(cat, Animal)))
 
+local a
 for i=0,1000000 do
   local tcat = Cat()
-  local a = tcat*5
+  a = tcat*5
 end
+
+print(a)
+
+if not cclass.cast(an, Cat) then print("can't cast animal to cat") end

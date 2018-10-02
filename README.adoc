@@ -206,10 +206,13 @@ bases:: list of base classes
 
 Optional build hooks can be added to customize some parts of the build process, they are functions starting with `__`.
 
-.Build hooks
+.Class hooks
 [horizontal]
 postbuild(class, build):: used to add more properties to the build, called after the base classes inheritance process
 postmeta(class, meta):: used to modify the built instance metatable, called at the end of the build process
+instantiate(class, ...):: used to replace the default instantiate behavior, should return a valid new Luaoop instance (`...` are constructor arguments)
++
+NOTE: this hook by-pass the construct/destruct default behavior (they will not be set/called)
 
 .After-build properties
 [horizontal]
@@ -260,7 +263,7 @@ index:: inherits from the `build` table and each special tables inherit from `bu
 
 === Instance behavior
 
-The instance behavior is set using the `meta` built metatable. If `data` or `id` hooks are not set, this metatable could be replaced by a copy (not deep) to have custom fields (to store data and id). 
+The instance behavior is set using the `meta` built metatable. If `data` or `id` hooks are not set or in some cases if the class has a destructor, this metatable could be replaced by a copy (not deep) to have custom fields (to store data and id). 
 
 TIP: The new metatable would be marked as custom with a `luaoop.custom` boolean property set to true.
 
