@@ -2,5 +2,3 @@
 = TODO
 
 * operator rhs inherited types resolution
-* clarify cclass rework, try to optimize getmetatable with metatype hack or rethink design
-* cclass rework doc
