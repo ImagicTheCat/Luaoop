@@ -594,10 +594,10 @@ local cclass = {}
 -- getmetatable is local, defined at the begining of this file
 local metatypes = {}
 getmetatable = function(t) 
-  if type(t) == "cdata" then
-    return metatypes[tostring(ffi.typeof(t))]
-  else
+  if type(t) ~= "cdata" then
     return _getmetatable(t)
+  else
+    return metatypes[tostring(ffi.typeof(t))]
   end
 end
 
