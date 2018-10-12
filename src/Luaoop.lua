@@ -1,3 +1,5 @@
+-- https://github.com/ImagicTheCat/Luaoop
+
 local Luaoop = {}
 
 local lua5_1 = (string.find(_VERSION, "5.1") ~= nil)
