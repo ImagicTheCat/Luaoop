@@ -559,29 +559,6 @@ function class.id(t)
   end
 end
 
--- t: instance
--- return unique instance data table or nil
-function class.data(t)
-  if t then
-    local mtable = getmetatable(t)
-    local luaoop
-    if mtable then luaoop = mtable.luaoop end
-    if luaoop and luaoop.type then
-      if luaoop.__data then -- data hook
-        return luaoop.__data(t)
-      else -- regular
-        mtable, luaoop = force_custom_mtable(mtable, t) -- data requires custom properties
-
-        if not luaoop.data then -- create data table
-          luaoop.data = {}
-        end
-
-        return luaoop.data
-      end
-    end
-  end
-end
-
 -- SHORTCUTS
 setmetatable(class, { __call = function(t, name, ...) 
   return class.new(name, ...)

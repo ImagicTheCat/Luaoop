@@ -104,11 +104,10 @@ print("bottle id: "..class.id(bottle))
 local b = bottle*bottle
 print(b)
 
-print("b id: "..class.id(b), class.data(b))
+print("b id: "..class.id(b))
 
 -- sub a bottle by itself (0/0 bottle)
 b = bottle-bottle
 print(b)
-print(class.data(b))
 
-print("b id: "..class.id(b), class.data(b))
+print("b id: "..class.id(b))

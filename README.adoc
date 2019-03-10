@@ -57,10 +57,6 @@ class.types(t)
 -- return unique instance id or nil
 class.id(t)
 
--- t: instance
--- return unique instance data table or nil
-class.data(t)
-
 -- get the class metatable applied to the instances
 -- useful to apply class behaviour to a custom table
 -- will build the class if not already built
@@ -187,9 +183,27 @@ CAUTION: Comparison of different instances with different types is possible, but
 
 There are no private/protected mechanisms in Luaoop.
 
-"Private" methods can be achieved with local functions in the class definition.
+."`Private`" methods can be achieved with local functions in the class definition.
+[source, lua]
+----
+local function pmethod(self)
+end
+----
 
-"Private" instance properties can be achieved using `class.data`, it can be used to keep some data away from the instance user.
+."`Private`" instance properties can be achieved using a local table in the class definition with weak keys for the instances.
+[source, lua]
+----
+local privates = setmetatable({}, {__mode = "k"})
+
+function Object:__construct()
+  privates[self] = { a = 1, b = 2 }
+end
+
+function Object:method()
+  local p = privates[self]
+  p.a = p.a*p.b
+end
+----
 
 == Behavior transfer
 
@@ -232,7 +246,6 @@ Optional hooks can be added to customize the instances behavior, they are functi
 
 .Hooks
 [horizontal]
-data(instance):: should return the instance datatable
 id(instance):: should return the instance id (number)
 
 .Metamethods
@@ -263,6 +276,6 @@ index:: inherits from the `build` table and each special tables inherit from `bu
 
 === Instance behavior
 
-The instance behavior is set using the `meta` built metatable. If `data` or `id` hooks are not set or in some cases if the class has a destructor, this metatable could be replaced by a copy (not deep) to have custom fields (to store data and id). 
+The instance behavior is set using the `meta` built metatable. If `id` hook is not set or in some cases if the class has a destructor, this metatable could be replaced by a copy (not deep) to have custom fields (to store the id).
 
 TIP: The new metatable would be marked as custom with a `luaoop.custom` boolean property set to true.
