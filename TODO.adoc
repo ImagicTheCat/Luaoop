@@ -2,3 +2,5 @@
 = TODO
 
 * operator rhs inherited types resolution
+* FFI metatype implementation
+* instance inherits everything except properties starting with `__`, not only table
