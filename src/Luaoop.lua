@@ -96,7 +96,7 @@ function class.name(t)
   end
 end
 
--- t: instance
+-- t: class or instance
 -- return the type (class) or nil
 function class.type(t)
   if t then
@@ -105,14 +105,15 @@ function class.type(t)
     if mtable then luaoop = mtable.luaoop end
 
     if luaoop then
-      return luaoop.type
+      return luaoop.type or t
     end
   end
 end
 
 -- check if an instance/class is/inherits from a specific class
 -- t: class or instance
--- classdef: can be nil to check if t is a valid (built) class
+-- classdef: class
+-- return true or nil
 function class.is(t, classdef)
   if t then
     local mtable = getmetatable(t)
@@ -121,19 +122,13 @@ function class.is(t, classdef)
 
     if luaoop then
       -- build class if not built
-      if not luaoop.types and not luaoop.type then
+      if not luaoop.type and not luaoop.types then
         class.build(t)
       end
 
-      if not classdef then
-        return not luaoop.type
-      else
-        return luaoop.types[classdef]
-      end
+      return luaoop.types[classdef]
     end
   end
-
-  return false
 end
 
 -- t: class or instance

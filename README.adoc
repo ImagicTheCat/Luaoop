@@ -38,13 +38,14 @@ class.new(name, ...)
 -- return class name or nil
 class.name(t)
 
--- t: instance
+-- t: class or instance
 -- return the type (class) or nil
 class.type(t)
 
 -- check if an instance/class is/inherits from a specific class
 -- t: class or instance
--- classdef: can be nil to check if t is a valid (built) class
+-- classdef: class
+-- return true or nil
 class.is(t, classdef)
 
 -- return instance/class types map (type => true)
