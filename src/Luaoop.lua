@@ -334,6 +334,11 @@ function class.meta(classdef)
   end
 end
 
+local function proxy_gc(t)
+  local mt = getmetatable(t)
+  mt.destructor(mt.instance)
+end
+
 -- create instance
 -- classdef: class
 -- ...: constructor arguments
@@ -360,16 +365,15 @@ function class.instantiate(classdef, ...)
       if destructor then
         local mtable, luaoop = force_custom_mtable(luaoop.meta, t) -- gc requires custom properties
 
-        local gc = function()
-          destructor(t)
-        end
-
         if lua5_1 then -- Lua 5.1
           local proxy = newproxy(true)
-          getmetatable(proxy).__gc = gc
+          local mt = getmetatable(proxy)
+          mt.__gc = proxy_gc
+          mt.destructor = destructor
+          mt.instance = t
           luaoop.proxy = proxy
         else
-          luaoop.proxy = setmetatable({}, { __gc = gc })
+          luaoop.proxy = setmetatable({}, { __gc = proxy_gc, instance = t, destructor = destructor })
         end
       end
 
