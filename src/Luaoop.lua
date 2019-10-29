@@ -208,8 +208,13 @@ local function op_tostring(lhs)
   local f = getop(lhs, "__tostring", nil, true)
   if f then
     return f(lhs)
-  else
-    return "class<"..class.name(lhs)..">: "..class.id(lhs)
+  else -- default: print "class<name>: <table addr>"
+    local mtable = getmetatable(lhs)
+    mtable.__tostring = nil
+    local hex = string.match(tostring(lhs), ".*(0x%x+).*") or ""
+    mtable.__tostring = op_tostring
+
+    return "class<"..class.name(lhs)..">: "..hex
   end
 end
 
@@ -509,50 +514,6 @@ function class.build(classdef)
       for k,v in pairs(classdef) do
         if type(v) == "table" and string.sub(k, 1, 2) == "__" then 
           setmetatable(v, { __index = luaoop.build[k] })
-        end
-      end
-    end
-  end
-end
-
--- return address number from table (tostring hack, return nil on failure)
-local function table_addr(t)
-  local hex = string.match(tostring(t), ".*(0x%x+).*")
-  if hex then return tonumber(hex) end
-end
-
-local addr_counter = 0 -- addr counter in replacement of table_addr
-
--- works by using tostring(table) address hack or using a counter instead on failure
--- t: instance
--- return unique instance id or nil
-function class.id(t)
-  if t then
-    local mtable = getmetatable(t)
-    local luaoop
-    if mtable then luaoop = mtable.luaoop end
-    if luaoop then
-      if luaoop.__id then -- id hook
-        return luaoop.__id(t)
-      else -- regular
-        mtable, luaoop = force_custom_mtable(mtable, t) -- id requires custom properties
-
-        if luaoop.id then -- return existing id
-          return luaoop.id
-        elseif luaoop.type then -- generate id
-          -- remove tostring proxy
-          mtable.__tostring = nil
-          -- generate addr
-          luaoop.id = table_addr(t)
-          -- reset tostring proxy
-          mtable.__tostring = op_tostring
-
-          if not luaoop.id then
-            luaoop.id = addr_counter
-            addr_counter = addr_counter+1
-          end
-
-          return luaoop.id
         end
       end
     end

@@ -52,11 +52,6 @@ class.is(t, classdef)
 -- return types map (type => true) or nil
 class.types(t)
 
--- works by using tostring(table) address hack or using a counter instead on failure
--- t: instance
--- return unique instance id or nil
-class.id(t)
-
 -- get the class metatable applied to the instances
 -- useful to apply class behaviour to a custom table
 -- will build the class if not already built
@@ -242,11 +237,12 @@ type:: instance type
 types:: map of type (class) => true
 name:: base class name
 
+////
 Optional hooks can be added to customize the instances behavior, they are functions starting with `__`.
 
 .Hooks
 [horizontal]
-id(instance):: should return the instance id (number)
+////
 
 .Metamethods
 [horizontal]
@@ -276,6 +272,6 @@ index:: inherits from the `build` table and each special tables inherit from `bu
 
 === Instance behavior
 
-The instance behavior is set using the `meta` built metatable. If `id` hook is not set or in some cases if the class has a destructor, this metatable could be replaced by a copy (not deep) to have custom fields (to store the id).
+The instance behavior is set using the `meta` built metatable. In some cases if the class has a destructor, this metatable could be replaced by a copy (not deep) to have custom instance fields.
 
 TIP: The new metatable would be marked as custom with a `luaoop.custom` boolean property set to true.

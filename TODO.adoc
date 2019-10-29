@@ -5,3 +5,6 @@
 * FFI metatype implementation
 * instance inherits everything except properties starting with `__`, not only table
 * fix `class.is` ambiguity when used with a second nil parameter (by mistake)
+* better usage example
+* improve/cleanup properties inheritance
+* optimizations

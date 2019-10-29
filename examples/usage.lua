@@ -98,16 +98,10 @@ end
 print(bottle*2)
 print(2*bottle)
 
-print("bottle id: "..class.id(bottle))
-
 -- multiply a bottle by the same bottle
 local b = bottle*bottle
 print(b)
 
-print("b id: "..class.id(b))
-
 -- sub a bottle by itself (0/0 bottle)
 b = bottle-bottle
 print(b)
-
-print("b id: "..class.id(b))
