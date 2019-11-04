@@ -1,27 +1,24 @@
--- add package path for the example
-package.path = ";../src/?.lua;"..package.path
+-- test general usage
 
 -- lib
+package.path = ";src/?.lua;"..package.path
 local Luaoop = require("Luaoop")
 class = Luaoop.class
 
--- DEF OBJECT
+-- DEF
+
 Object = class("Object")
 
 function Object:__construct()
-  print("new object")
+  print("Object constructor")
 end
-
-function Object:classname()
-  return class.name(self)
-end
-
--- DEF BOTTLE
 
 Bottle = class("Bottle", Object)
 
 function Bottle:__construct(max)
   Object.__construct(self)
+
+  print("Bottle constructor")
 
   self.max = max
   self.amount = 0
@@ -32,13 +29,15 @@ function Bottle:fill()
 end
 
 function Bottle:drink()
-  if self.amount >= 2 then
-    self.amount = self.amount-2
+  if self.amount >= 1 then
+    self.amount = self.amount-1
   end
 end
 
 Bottle.__mul["number"] = function(self, rhs)
-  return self.amount*rhs
+  local b = Bottle(self.max*rhs)
+  b.amount = self.amount*rhs
+  return b
 end
 
 Bottle.__mul[Bottle] = function(self, rhs)
@@ -69,39 +68,35 @@ end
 
 -- USE
 
+print("create bottle")
 local bottle = Bottle(10)
-
 print(bottle)
+print("fill bottle")
 bottle:fill()
 print(bottle)
+print("drink bottle")
 bottle:drink()
 print(bottle)
+print("drink bottle")
 bottle:drink()
 print(bottle)
 
-if class.is(bottle, Object) then print("is object") end
-if class.is(bottle, Bottle) then print("is bottle") end
-if not class.is(bottle, Glass) then print("is not glass") end
+if class.is(bottle, Object) then print("bottle is Object") end
+if class.is(bottle, Bottle) then print("bottle is Bottle") end
+if not class.is(bottle, Glass) then print("bottle is not Glass") end
 
-print(class.name(bottle), bottle:classname())
-print(class.name(Bottle))
-print(class.name(Object))
-print(Bottle)
-print(Object)
+print("Object", Object, class.name(Object))
+print("Bottle", Bottle, class.name(Bottle))
+print("bottle", bottle, class.name(bottle))
 
+print("bottle types:")
 local types = class.types(bottle)
 
 for k,v in pairs(types) do
-  print("bottle has type "..class.name(k))
+  print("- "..class.name(k))
 end
 
-print(bottle*2)
-print(2*bottle)
-
--- multiply a bottle by the same bottle
-local b = bottle*bottle
-print(b)
-
--- sub a bottle by itself (0/0 bottle)
-b = bottle-bottle
-print(b)
+print("bottle*2", bottle*2)
+print("2*bottle", 2*bottle)
+print("bottle*bottle", bottle*bottle)
+print("bottle-bottle", bottle-bottle)

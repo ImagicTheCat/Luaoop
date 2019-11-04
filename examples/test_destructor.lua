@@ -1,7 +1,5 @@
--- add package path for the example
-package.path = ";../src/?.lua;"..package.path
-
 -- lib
+package.path = ";src/?.lua;"..package.path
 local Luaoop = require("Luaoop")
 class = Luaoop.class
 
@@ -19,8 +17,6 @@ function A:__destruct()
 end
 
 -- test
-
-print(_VERSION) 
 
 for i=1,10 do
   local a = A(i)

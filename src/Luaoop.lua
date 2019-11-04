@@ -356,6 +356,11 @@ local function class_build(classdef)
   end
 end
 
+local function proxy_gc(t)
+  local mt = getmetatable(t)
+  mt.destructor(mt.instance)
+end
+
 -- create instance
 -- classdef: class
 -- ...: constructor arguments
@@ -512,11 +517,6 @@ local function class_meta(classdef)
       return luaoop.meta
     end
   end
-end
-
-local function proxy_gc(t)
-  local mt = getmetatable(t)
-  mt.destructor(mt.instance)
 end
 
 -- MODULE class
