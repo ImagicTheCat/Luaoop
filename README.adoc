@@ -84,7 +84,9 @@ class.getop(lhs, name, rhs, no_error)
 
 * single and multiple inheritance
 * all properties are inherited for classes
-* all properties except special tables (starting with `__`) are inherited for instances
+* all properties except specials (starting with `__`) are inherited for instances
+
+NOTE: Special tables inherit from bases' special tables (one level).
 
 WARNING: In case of multiple inheritance with functions with the same name, one will be taken arbitrarily. This issue can be solved by accessing directly to a specific parent method/function using the class definition.
 

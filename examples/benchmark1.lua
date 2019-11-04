@@ -39,9 +39,9 @@ end
 
 Vec3.__concat["string"] = function(self, rhs, inverse)
   if inverse then
-    return rhs..self:__tostring()
+    return rhs..tostring(self)
   else
-    return self:__tostring()..rhs
+    return tostring(self)..rhs
   end
 end
 

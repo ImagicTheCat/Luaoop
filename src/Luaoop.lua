@@ -122,13 +122,13 @@ end
 
 local function op_concat(lhs,rhs)
   local f = class_getop(lhs, "__concat", rhs, true)
-  if f then 
-    return f(lhs,rhs) 
+  if f then
+    return f(lhs,rhs)
   end
 
   f = class_getop(rhs, "__concat", lhs)
-  if f then 
-    return f(rhs,lhs,true) 
+  if f then
+    return f(rhs,lhs,true)
   end
 end
 
@@ -144,19 +144,19 @@ end
 
 local function op_add(lhs,rhs)
   local f = class_getop(lhs, "__add", rhs, true)
-  if f then 
-    return f(lhs,rhs) 
+  if f then
+    return f(lhs,rhs)
   end
 
   f = class_getop(rhs, "__add", lhs)
-  if f then 
-    return f(rhs,lhs) 
+  if f then
+    return f(rhs,lhs)
   end
 end
 
 local function op_sub(lhs,rhs) -- also deduced as lhs+(-rhs)
   local f = class_getop(lhs, "__sub", rhs, true)
-  if f then 
+  if f then
     return f(lhs,rhs)
   end
 
@@ -168,55 +168,55 @@ end
 
 local function op_mul(lhs,rhs)
   local f = class_getop(lhs, "__mul", rhs, true)
-  if f then 
-    return f(lhs,rhs) 
+  if f then
+    return f(lhs,rhs)
   end
 
   f = class_getop(rhs, "__mul", lhs)
-  if f then 
-    return f(rhs,lhs) 
+  if f then
+    return f(rhs,lhs)
   end
 end
 
 local function op_div(lhs,rhs)
   local f = class_getop(lhs, "__div", rhs)
-  if f then 
-    return f(lhs,rhs) 
+  if f then
+    return f(lhs,rhs)
   end
 end
 
 local function op_mod(lhs,rhs)
   local f = class_getop(lhs, "__mod", rhs)
-  if f then 
-    return f(lhs,rhs) 
+  if f then
+    return f(lhs,rhs)
   end
 end
 
 local function op_pow(lhs,rhs)
   local f = class_getop(lhs, "__pow", rhs)
-  if f then 
-    return f(lhs,rhs) 
+  if f then
+    return f(lhs,rhs)
   end
 end
 
 local function op_eq(lhs,rhs)
   local f = class_getop(lhs, "__eq", rhs, true)
-  if f then 
-    return f(lhs,rhs) 
+  if f then
+    return f(lhs,rhs)
   end
 end
 
 local function op_lt(lhs,rhs)
   local f = class_getop(lhs, "__lt", rhs)
-  if f then 
-    return f(lhs,rhs) 
+  if f then
+    return f(lhs,rhs)
   end
 end
 
 local function op_le(lhs,rhs)
   local f = class_getop(lhs, "__le", rhs)
-  if f then 
-    return f(lhs,rhs) 
+  if f then
+    return f(lhs,rhs)
   end
 end
 
@@ -246,7 +246,7 @@ local function class_build(classdef)
       for k in pairs(luaoop.instance_build) do luaoop.instance_build[k] = nil end
 
       --- inheritance
-      for _,base in ipairs(luaoop.bases) do
+      for _, base in ipairs(luaoop.bases) do
         local base_luaoop = getmetatable(base).luaoop
 
         -- types
@@ -299,22 +299,22 @@ local function class_build(classdef)
 
       --- build generic instance metatable
       ---- instance build
-      for k,v in pairs(luaoop.build) do -- class build, everything but special tables
-        if type(v) ~= "table" or string.sub(k, 1, 2) ~= "__" then 
+      for k,v in pairs(luaoop.build) do -- class build, everything but special properties
+        if string.sub(k, 1, 2) ~= "__" then
           luaoop.instance_build[k] = v
         end
       end
 
-      for k,v in pairs(classdef) do -- class, everything but special tables
-        if type(v) ~= "table" or string.sub(k, 1, 2) ~= "__" then 
+      for k,v in pairs(classdef) do -- class, everything but special properties
+        if string.sub(k, 1, 2) ~= "__" then
           luaoop.instance_build[k] = v
         end
       end
 
       ---- build generic instance metatable
-      if not luaoop.meta then 
+      if not luaoop.meta then
         luaoop.meta = {
-          __index = luaoop.instance_build, 
+          __index = luaoop.instance_build,
           luaoop = {
             name = luaoop.name,
             types = luaoop.types,
@@ -343,12 +343,12 @@ local function class_build(classdef)
         end
       end
 
-      -- setup class 
+      -- setup class
       mtable.__index = luaoop.build -- regular properties inheritance
 
       --- special tables inheritance
       for k,v in pairs(classdef) do
-        if type(v) == "table" and string.sub(k, 1, 2) == "__" then 
+        if type(v) == "table" and string.sub(k, 1, 2) == "__" then
           setmetatable(v, { __index = luaoop.build[k] })
         end
       end
@@ -374,10 +374,10 @@ local function class_instantiate(classdef, ...)
       return __instantiate(classdef, ...)
     else -- regular
       -- create instance
-      local t = setmetatable({}, luaoop.meta) 
+      local t = setmetatable({}, luaoop.meta)
 
-      local constructor = t.__construct
-      local destructor = t.__destruct
+      local constructor = classdef.__construct
+      local destructor = classdef.__destruct
 
       if destructor then
         local mtable, luaoop = force_custom_mtable(luaoop.meta, t) -- gc requires custom properties
@@ -437,8 +437,8 @@ local function class_new(name, ...)
       if not luaoop.build then class_build(base) end
     end
 
-    return setmetatable(c, { 
-      luaoop = { bases = bases, name = name }, 
+    return setmetatable(c, {
+      luaoop = { bases = bases, name = name },
       __call = class_instantiate,
       __tostring = function(c) return "class<"..class_name(c)..">" end
     })
@@ -530,7 +530,7 @@ local class = setmetatable({
   instantiate = class_instantiate,
   build = class_build,
   getop = class_getop
-}, { 
+}, {
   __call = function(t, name, ...) -- shortcut
     return class_new(name, ...)
   end
