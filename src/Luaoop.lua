@@ -1,4 +1,5 @@
 -- https://github.com/ImagicTheCat/Luaoop
+-- MIT license (see LICENSE)
 
 local Luaoop = {}
 

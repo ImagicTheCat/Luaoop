@@ -3,7 +3,7 @@
 --- n: max level
 
 -- lib
-package.path = ";../src/?.lua;"..package.path
+package.path = ";src/?.lua;"..package.path
 local Luaoop = require("Luaoop")
 class = Luaoop.class
 

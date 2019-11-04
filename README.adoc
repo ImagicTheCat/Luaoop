@@ -86,13 +86,13 @@ class.getop(lhs, name, rhs, no_error)
 * all properties are inherited for classes
 * all properties except specials (starting with `__`) are inherited for instances
 
-NOTE: Special tables inherit from bases' special tables (one level).
+NOTE: Special tables inherit from bases' special tables.
 
-WARNING: In case of multiple inheritance with functions with the same name, one will be taken arbitrarily. This issue can be solved by accessing directly to a specific parent method/function using the class definition.
+WARNING: In case of multiple inheritance with functions with the same name, one will be taken arbitrarily. This issue can be solved by accessing directly a specific parent method/function using the class definition.
 
 Inheritance is not dynamic (cached) and is built by `class.build`. `class.build` must be called for any later changes to the class definition or base classes (in order, build the dependencies, then build the class, then build the derived classes).
 
-NOTE: The function is already called when using a class for inheritance or instantiation for the first time, in most cases calling this function is not needed because the class is completely defined when used. 
+NOTE: This function is already called when using a class for inheritance or instantiation for the first time; in most cases calling this function is not needed because the class is completely defined when used.
 
 
 .Multiple inheritance
@@ -136,8 +136,8 @@ end
 
 == Special methods
 
-Special methods for a class can be defined, they will be overridden the same way other properties are.
-Every special method start with `__` (they are not metamethods, they are named like this to keep consistency with the Lua notation).
+Special methods for a class can be defined, they will be inherited (for a class) the same way other properties are.
+Each special method start with `__` (they are not metamethods, they are named like this to keep consistency with the Lua notation).
 
 === Misc
 
@@ -169,7 +169,7 @@ add:: like the metamethod (no order)
 sub:: like the metamethod (can be omitted if `add` is defined and `unm` is defined for rhs)
 mul:: like the metamethod (no order)
 div:: like the metamethod
-mod:: like the metamethod 
+mod:: like the metamethod
 pow:: like the metamethod
 eq:: like the metamethod (doesn't throw an error if the operator is missing, will be false by default)
 le:: like the metamethod
@@ -205,11 +205,11 @@ end
 
 == Behavior transfer
 
-It's possible to give Luaoop class and instance behavior to any object by adding the `luaoop` property (a table) to its metatable (and set some metamethods). 
+It's possible to give Luaoop class and instance behavior to any object by adding the `luaoop` property (a table) to its metatable (and set some metamethods).
 
 === Class behavior
 
-TIP: `class.new` will check (and build if not built) base classes and initializes class special tables. It is easier to use this function and copy/modify the metatable afterwards.
+TIP: `class.new` will check (and build if not built) base classes and initialize class special tables. It is easier to use this function and copy/modify the metatable afterwards.
 
 .Base properties
 [horizontal]
@@ -228,8 +228,8 @@ NOTE: this hook by-pass the construct/destruct default behavior (they will not b
 
 .After-build properties
 [horizontal]
-build:: table containing inherited properties and special tables for the class
-instance_build:: table containing inherited properties without special tables (merged with class properties)
+build:: table containing inherited properties and special tables for the class (not self)
+instance_build:: table containing inherited class properties without specials
 types:: map of type (class) => true
 meta:: metatable built used for the instances
 +
@@ -249,7 +249,7 @@ Optional hooks can be added to customize the instances behavior, they are functi
 
 .Metamethods
 [horizontal]
-index:: inherits from class `instance_build`
+index:: inherits from class' `instance_build`
 call:: op call
 unm:: op unm
 add:: op add
@@ -271,7 +271,7 @@ NOTE: It's easier to let these properties being created by `class.build` and jus
 [horizontal]
 call:: shortcut for `class.instantiate`
 tostring:: for regular classes, will print `class<name>`
-index:: inherits from the `build` table and each special tables inherit from `build` special tables
+index:: inherits from the `build` table and each special table inherits from `build` special tables
 
 === Instance behavior
 
