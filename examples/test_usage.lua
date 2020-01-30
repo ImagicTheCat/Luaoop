@@ -85,7 +85,9 @@ if class.is(bottle, Object) then print("bottle is Object") end
 if class.is(bottle, Bottle) then print("bottle is Bottle") end
 if not class.is(bottle, Glass) then print("bottle is not Glass") end
 
+local object = Object()
 print("Object", Object, class.name(Object))
+print("Object", object, class.name(object))
 print("Bottle", Bottle, class.name(Bottle))
 print("bottle", bottle, class.name(bottle))
 

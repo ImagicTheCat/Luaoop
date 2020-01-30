@@ -111,13 +111,13 @@ local function op_tostring(lhs)
   local f = class_getop(lhs, "__tostring", nil, true)
   if f then
     return f(lhs)
-  else -- default: print "class<name>: <table addr>"
+  else -- default: print "instance<type>: 0x..."
     local mtable = getmetatable(lhs)
     mtable.__tostring = nil
-    local hex = string.match(tostring(lhs), ".*(0x%x+).*") or ""
+    local str = string.gsub(tostring(lhs), "table:", "instance<"..class_name(lhs)..">:", 1)
     mtable.__tostring = op_tostring
 
-    return "class<"..class.name(lhs)..">: "..hex
+    return str
   end
 end
 
@@ -443,10 +443,13 @@ local function class_new(name, ...)
       if not luaoop.build then class_build(base) end
     end
 
+    -- default print "class<type>: 0x..."
+    local tostring_const = string.gsub(tostring(c), "table:", "class<"..name..">:", 1)
+
     return setmetatable(c, {
       luaoop = { bases = bases, name = name },
       __call = class_instantiate,
-      __tostring = function(c) return "class<"..class_name(c)..">" end
+      __tostring = function(c) return tostring_const end
     })
   else
     error("class name is not a string")
@@ -485,7 +488,7 @@ local function class_types(t)
     if luaoop then
       -- build class if not built
       if not luaoop.types and not luaoop.type then
-        class.build(t)
+        class_build(t)
       end
 
       local types = {}
