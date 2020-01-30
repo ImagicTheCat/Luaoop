@@ -1,8 +1,0 @@
-
-= TODO
-
-* operator rhs inherited types resolution
-* FFI metatype implementation
-* better usage example
-* improve/cleanup properties inheritance
-* optimizations
