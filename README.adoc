@@ -15,13 +15,7 @@ Look at the examples for more understanding of the library.
 
 == Install
 
-Instead of adding the file manually, luarocks can be used:
-
-`luarocks install https://raw.githubusercontent.com/ImagicTheCat/Luaoop/master/rockspecs/luaoop-scm-2.rockspec`
-
-See link:rockspecs[] and https://luarocks.org/modules/imagicthecat-0a6b669a3a/luaoop[luarocks].
-
-NOTE: It is designed to work with LuaJIT (Lua 5.1), but the code should work on latest versions.
+See link:rockspecs[] or https://luarocks.org/modules/imagicthecat-0a6b669a3a/luaoop[luarocks].
 
 == API
 
