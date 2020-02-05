@@ -9,13 +9,15 @@ endif::[]
 :toc: left
 :toclevels: 5
 
-Luaoop is a library to do OOP (Object Oriented Programming) which aims to be simple, powerful and optimized (for LuaJIT).
+Luaoop is a library to do OOP (**O**bject **O**riented **P**rogramming) which aims to be simple, powerful and optimized (especially for LuaJIT).
 
-Look at the examples for more understanding of the library.
+Look at the link:examples[] for more understanding of the library.
 
 == Install
 
 See link:rockspecs[] or https://luarocks.org/modules/imagicthecat-0a6b669a3a/luaoop[luarocks].
+
+TIP: Rockspecs are human-readable. They are useful even without using luarocks, as for manual installations.
 
 == API
 
@@ -89,7 +91,7 @@ Inheritance is not dynamic (cached) and is built by `class.build`. `class.build`
 NOTE: This function is already called when using a class for inheritance or instantiation for the first time; in most cases calling this function is not needed because the class is completely defined when used.
 
 
-.Multiple inheritance
+.Multiple inheritance and override
 ====
 [source,lua]
 ----
@@ -110,28 +112,30 @@ end
 ----
 ====
 
-.Overload
+.Constructor override
 ====
 [source,lua]
 ----
 A = class("A")
 
 function A:__construct()
-  print("a")
+  print("A")
 end
 
 B = class("B", A)
 function B:__construct()
   A.__construct(self) -- call parent (A) constructor
-  print("b")
+  print("B")
 end
 ----
 ====
 
 == Special methods
 
-Special methods for a class can be defined, they will be inherited (for a class) the same way other properties are.
-Each special method start with `__` (they are not metamethods, they are named like this to keep consistency with the Lua notation).
+Special methods for a class can be defined; they will be inherited (for a class) the same way other properties are.
+Each special method is prefixed by `__`.
+
+NOTE: They are not metamethods, they are named like this to keep consistency with the Lua notation.
 
 === Misc
 
@@ -139,7 +143,7 @@ Each special method start with `__` (they are not metamethods, they are named li
 construct:: called at initialization
 destruct:: called at garbage collection
 
-=== Operators (or things similar)
+=== Operators
 
 Operators can be defined like this:
 [source,lua]
