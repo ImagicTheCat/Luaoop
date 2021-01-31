@@ -42,34 +42,6 @@ local class = setmetatable(xtype.create("class", "xtype"), {
   xtype = "xtype"
 })
 
--- force an instance to have a custom mtable (by default they share the same table for optimization)
--- mtable: current instance mtable
--- t: instance
--- return custom mtable, custom luaoop table
-local function force_custom_mtable(mtable, t)
-  if not mtable.luaoop.custom then
-    -- copy mtable
-    local new_mtable = {}
-    for k,v in pairs(mtable) do
-      new_mtable[k] = v
-    end
-
-    -- copy luaoop
-    new_mtable.luaoop = {}
-    for k,v in pairs(mtable.luaoop) do
-      new_mtable.luaoop[k] = v
-    end
-
-    -- flag custom
-    new_mtable.luaoop.custom = true
-    setmetatable(t, new_mtable)
-
-    mtable = new_mtable
-  end
-
-  return mtable, mtable.luaoop
-end
-
 -- proxy lua operators
 local function op_tostring(lhs)
   local f = class_getop(lhs, "__tostring", nil, true)
@@ -80,7 +52,6 @@ local function op_tostring(lhs)
     mtable.__tostring = nil
     local str = string.gsub(tostring(lhs), "table:", "instance<"..class_name(lhs)..">:", 1)
     mtable.__tostring = op_tostring
-
     return str
   end
 end
@@ -100,134 +71,48 @@ end
 --
 -- classdef: class
 local function class_build(classdef)
-  if classdef then
-    local mtable = getmetatable(classdef)
-    local luaoop
-    if mtable then luaoop = mtable.luaoop end
-
-    if luaoop and not luaoop.type then
-      -- build
-      -- prepare build, table with access to the class inherited properties
-      if not luaoop.build then luaoop.build = {} end
-      for k in pairs(luaoop.build) do luaoop.build[k] = nil end
-
-      -- prepare types
-      if not luaoop.types then luaoop.types = {} end
-      for k in pairs(luaoop.types) do luaoop.types[k] = nil end
-
-      -- prepare instance build
-      if not luaoop.instance_build then luaoop.instance_build = {} end
-      for k in pairs(luaoop.instance_build) do luaoop.instance_build[k] = nil end
-
-      --- inheritance
-      for _, base in ipairs(luaoop.bases) do
-        local base_luaoop = getmetatable(base).luaoop
-
-        -- types
-        for t in pairs(base_luaoop.types) do
-          luaoop.types[t] = true
-        end
-
-        -- class build properties
-        for k,v in pairs(base_luaoop.build) do
-          if type(v) == "table" and string.sub(k, 1, 2) == "__" then -- inherit/merge special tables
-            local table = luaoop.build[k]
-            if not table then
-              table = {}
-              luaoop.build[k] = table
-            end
-
-            for tk, tv in pairs(v) do
-              table[tk] = tv
-            end
-          else -- inherit regular property
-            luaoop.build[k] = v
-          end
-        end
-
-        -- class properties
-        for k,v in pairs(base) do
-          if type(v) == "table" and string.sub(k, 1, 2) == "__" then -- inherit/merge special tables
-            local table = luaoop.build[k]
-            if not table then
-              table = {}
-              luaoop.build[k] = table
-            end
-
-            for tk, tv in pairs(v) do
-              table[tk] = tv
-            end
-          else -- inherit regular property
-            luaoop.build[k] = v
-          end
-        end
-      end
-
-      -- add self type
-      luaoop.types[classdef] = true
-
-      -- postbuild hook
-      if luaoop.__postbuild then
-        luaoop.__postbuild(classdef, luaoop.build)
-      end
-
-      --- build generic instance metatable
-      ---- instance build
-      for k,v in pairs(luaoop.build) do -- class build, everything but special properties
-        if string.sub(k, 1, 2) ~= "__" then
-          luaoop.instance_build[k] = v
-        end
-      end
-
-      for k,v in pairs(classdef) do -- class, everything but special properties
-        if string.sub(k, 1, 2) ~= "__" then
-          luaoop.instance_build[k] = v
-        end
-      end
-
-      ---- build generic instance metatable
-      if not luaoop.meta then
-        luaoop.meta = {
-          __index = luaoop.instance_build,
-          luaoop = {
-            name = luaoop.name,
-            types = luaoop.types,
-            type = classdef
-          },
-
-          -- add operators metamethods
-          __call = op_call,
-          __unm = op_unm,
-          __add = op_add,
-          __sub = op_sub,
-          __mul = op_mul,
-          __div = op_div,
-          __pow = op_pow,
-          __mod = op_mod,
-          __eq = op_eq,
-          __le = op_le,
-          __lt = op_lt,
-          __tostring = op_tostring,
-          __concat = op_concat
-        }
-
-        -- postmeta hook
-        if luaoop.__postmeta then
-          luaoop.__postmeta(classdef, luaoop.meta)
-        end
-      end
-
-      -- setup class
-      mtable.__index = luaoop.build -- regular properties inheritance
-
-      --- special tables inheritance
-      for k,v in pairs(classdef) do
-        if type(v) == "table" and string.sub(k, 1, 2) == "__" then
-          setmetatable(v, { __index = luaoop.build[k] })
-        end
-      end
+  if not xtype.is(classdef, class) then error("invalid argument #1 (class expected)") end
+  local luaoop = classdef.luaoop
+  -- build
+  --- prepare build, table with access to the class inherited properties
+  if not luaoop.build then luaoop.build = {} end
+  for k in pairs(luaoop.build) do luaoop.build[k] = nil end
+  --- prepare instance build
+  if not luaoop.instance_build then luaoop.instance_build = {} end
+  for k in pairs(luaoop.instance_build) do luaoop.instance_build[k] = nil end
+  --- inheritance
+  ---- class build
+  for i=#luaoop.bases,1,-1 do -- least specific, descending order
+    local base = luaoop.bases[i]
+    -- inherit class build properties
+    for k,v in pairs(base.luaoop.build) do luaoop.build[k] = v end
+    -- inherit class properties
+    for k,v in pairs(base) do
+      if k ~= "luaoop" and not string.sub(k, 1, 6) == "xtype_" then luaoop.build[k] = v end
     end
   end
+  ---- instance build
+  for k,v in pairs(luaoop.build) do -- inherit class build, everything but special properties
+    if string.sub(k, 1, 2) ~= "__" then luaoop.instance_build[k] = v end
+  end
+  for k,v in pairs(classdef) do -- inherit class, everything but special properties
+    if k ~= "luaoop" and not string.sub(k, 1, 6) == "xtype_" --
+      and string.sub(k, 1, 2) ~= "__" then
+      luaoop.instance_build[k] = v
+    end
+  end
+  --- generic instance metatable
+  if not luaoop.meta then
+    luaoop.meta = {
+      __index = luaoop.instance_build,
+      -- operators
+      __call = op_call,
+      __unm = op_unm,
+      __tostring = op_tostring,
+    }
+  end
+  -- setup class inheritance
+  getmetatable(classdef).__index = luaoop.build -- regular properties inheritance
 end
 
 local function proxy_gc(t)
@@ -289,16 +174,13 @@ local function class_new(name, ...)
   -- check inheritance validity and build
   for i=1, bases.n do
     local base = bases[i]
-    if not xtype.is(base, class) then
-      error("invalid base class #"..i)
-    end
+    if not xtype.is(base, class) then error("invalid base class #"..i) end
     -- build
-    local luaoop = getmetatable(base).luaoop
-    if not luaoop.build then class_build(base) end
+    if not base.luaoop.build then class_build(base) end
   end
   -- create
   local c = xtype.create(name, ...)
-  c.luaoop = {}
+  c.luaoop = {bases = bases}
   -- default print "class<type>: 0x..."
   local tostring_const = string.gsub(tostring(c), "table:", "class<"..name..">:", 1)
   return setmetatable(c, {
