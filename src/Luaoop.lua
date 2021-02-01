@@ -37,33 +37,34 @@ end
 local xtype_get = xtype.get
 
 local Luaoop = {}
-local class_mt = {}
-local class = setmetatable(xtype.create("class", "xtype"), {
-  xtype = "xtype"
-})
+local class_mt = {xtype = "xtype"}
+local class = setmetatable(xtype.create("class", "xtype"), class_mt)
 
 -- proxy lua operators
-local function op_tostring(lhs)
-  local f = class_getop(lhs, "__tostring", nil, true)
+local function op_tostring(self)
+  local cdef = xtype_get(self)
+  local f = cdef.__tostring
   if f then
-    return f(lhs)
+    return f(self)
   else -- default: print "instance<type>: 0x..."
-    local mtable = getmetatable(lhs)
+    local mtable = getmetatable(self)
     mtable.__tostring = nil
-    local str = string.gsub(tostring(lhs), "table:", "instance<"..class_name(lhs)..">:", 1)
+    local str = string.gsub(tostring(self), "table:", "instance<"..class_name(self)..">:", 1)
     mtable.__tostring = op_tostring
     return str
   end
 end
 
-local function op_unm(lhs)
-  local f = class_getop(lhs, "__unm", nil)
-  if f then return f(lhs) end
+local function op_unm(self)
+  local f = xtype_get(self).__unm
+  if not f then error("missing definition") end
+  return f(self)
 end
 
-local function op_call(lhs, ...)
-  local f = class_getop(lhs, "__call", nil)
-  if f then return f(lhs, ...) end
+local function op_call(self, ...)
+  local f = xtype_get(self).__call
+  if not f then error("missing definition") end
+  return f(self, ...)
 end
 
 -- Build/re-build the class.
@@ -88,7 +89,7 @@ local function class_build(classdef)
     for k,v in pairs(base.luaoop.build) do luaoop.build[k] = v end
     -- inherit class properties
     for k,v in pairs(base) do
-      if k ~= "luaoop" and not string.sub(k, 1, 6) == "xtype_" then luaoop.build[k] = v end
+      if k ~= "luaoop" and string.sub(k, 1, 6) ~= "xtype_" then luaoop.build[k] = v end
     end
   end
   ---- instance build
@@ -96,7 +97,7 @@ local function class_build(classdef)
     if string.sub(k, 1, 2) ~= "__" then luaoop.instance_build[k] = v end
   end
   for k,v in pairs(classdef) do -- inherit class, everything but special properties
-    if k ~= "luaoop" and not string.sub(k, 1, 6) == "xtype_" --
+    if k ~= "luaoop" and string.sub(k, 1, 6) ~= "xtype_" --
       and string.sub(k, 1, 2) ~= "__" then
       luaoop.instance_build[k] = v
     end
@@ -105,10 +106,21 @@ local function class_build(classdef)
   if not luaoop.meta then
     luaoop.meta = {
       __index = luaoop.instance_build,
-      -- operators
+      -- unary operators
       __call = op_call,
       __unm = op_unm,
       __tostring = op_tostring,
+      -- binary operators
+      __add = xtype.op.add,
+      __sub = xtype.op.sub,
+      __mul = xtype.op.mul,
+      __div = xtype.op.div,
+      __mod = xtype.op.mod,
+      __pow = xtype.op.pow,
+      __concat = xtype.op.concat,
+      __eq = xtype.op.eq,
+      __lt = xtype.op.lt,
+      __le = xtype.op.le
     }
   end
   -- setup class inheritance
@@ -124,45 +136,33 @@ end
 -- classdef: class
 -- ...: constructor arguments
 local function class_instantiate(classdef, ...)
-  local mtable = getmetatable(classdef)
-  local luaoop
-  if mtable then luaoop = mtable.luaoop end
-
-  if luaoop and not luaoop.type then -- valid class
-    if not luaoop.build then
-      class_build(classdef)
+  local luaoop = classdef.luaoop
+  if not luaoop.build then class_build(classdef) end
+  -- create instance
+  local t = {}
+  local constructor = classdef.__construct
+  local destructor = classdef.__destruct
+  -- setup destructor
+  if destructor then
+    -- build custom metatable (require custom properties)
+    local mt = {}
+    for k,v in pairs(luaoop.meta) do mt[k] = v end
+    -- bind destructor
+    if lua5_1 then -- Lua 5.1
+      local proxy = newproxy(true)
+      local pmt = getmetatable(proxy)
+      pmt.__gc = proxy_gc
+      pmt.destructor = destructor
+      pmt.instance = t
+      mt.proxy = proxy
+    else
+      mt.proxy = setmetatable({}, { __gc = proxy_gc, instance = t, destructor = destructor })
     end
-
-    local __instantiate = luaoop.__instantiate
-    if __instantiate then -- instantiate hook
-      return __instantiate(classdef, ...)
-    else -- regular
-      -- create instance
-      local t = setmetatable({}, luaoop.meta)
-
-      local constructor = classdef.__construct
-      local destructor = classdef.__destruct
-
-      if destructor then
-        local mtable, luaoop = force_custom_mtable(luaoop.meta, t) -- gc requires custom properties
-
-        if lua5_1 then -- Lua 5.1
-          local proxy = newproxy(true)
-          local mt = getmetatable(proxy)
-          mt.__gc = proxy_gc
-          mt.destructor = destructor
-          mt.instance = t
-          luaoop.proxy = proxy
-        else
-          luaoop.proxy = setmetatable({}, { __gc = proxy_gc, instance = t, destructor = destructor })
-        end
-      end
-
-      -- construct
-      if constructor then constructor(t, ...) end
-      return t
-    end
-  end
+    setmetatable(t, mt)
+  else setmetatable(t, luaoop.meta) end
+  -- construct
+  if constructor then constructor(t, ...) end
+  return t
 end
 
 -- Create a new class.
@@ -207,7 +207,7 @@ class.new = class_new
 class.meta = class_meta
 class.instantiate = class_instantiate
 class.build = class_build
-class.mt.__call = function(t, ...) return class_new(...) end
+class_mt.__call = function(t, ...) return class_new(...) end
 
 -- Namespaces.
 Luaoop.class = class
