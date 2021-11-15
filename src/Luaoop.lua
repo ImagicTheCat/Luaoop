@@ -132,6 +132,11 @@ local function class_prebuild(classdef)
   return classdef.luaoop
 end
 
+local function proxy_gc(self)
+  local mt = getmetatable(self)
+  mt.destructor(mt.instance)
+end
+
 -- Create instance.
 -- Will build the class if not already built.
 --
@@ -147,7 +152,10 @@ local function class_instantiate(classdef, ...)
     local destructor = classdef.__destruct
     if destructor then
       local proxy = newproxy(true)
-      getmetatable(proxy).__gc = function() destructor(instance) end
+      local mt = getmetatable(proxy)
+      mt.__gc = proxy_gc
+      mt.destructor = destructor
+      mt.instance = instance
       instance.__proxy_gc = proxy
     end
   end
