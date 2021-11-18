@@ -1,21 +1,23 @@
 package = "Luaoop"
-version = "1.3-1"
+version = "2.0-1"
 source = {
   url = "git://github.com/ImagicTheCat/Luaoop",
-  tag = "1.3"
+  tag = "2.0"
 }
 
 description = {
-  summary = "One file Lua library to do OOP (Object Oriented Programming).",
+  summary = "Pure Lua library for OOP (Object Oriented Programming).",
   detailed = [[
-    Luaoop is a library to do OOP (Object Oriented Programming) which aims to be simple, powerful and optimized (for LuaJIT).
+    Luaoop is a pure Lua library for OOP (Object Oriented Programming).
+    It depends on the xtype dynamic type system library.
   ]],
   homepage = "https://github.com/ImagicTheCat/Luaoop",
   license = "MIT"
 }
 
 dependencies = {
-  "lua >= 5.1, < 5.4"
+  "lua >= 5.1, <= 5.4",
+  "xtype >= 1.0"
 }
 
 build = {

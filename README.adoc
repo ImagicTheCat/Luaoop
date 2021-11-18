@@ -9,7 +9,7 @@ endif::[]
 :toc: left
 :toclevels: 5
 
-Luaoop is a library to do OOP (**O**bject **O**riented **P**rogramming) which aims to be simple, powerful and optimized.
+Luaoop is a pure Lua library for OOP (**O**bject **O**riented **P**rogramming).
 
 It depends on the https://github.com/ImagicTheCat/lua-xtype[xtype] dynamic type system library.
 
